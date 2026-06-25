@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Deforestasi & Banjir — Kalimantan Selatan 2015–2024</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f5f7fa;--surface3:#eef1f6;
+  --text:#1e293b;--text2:#475569;--text3:#94a3b8;
+  --border:#e2e8f0;--border2:#cbd5e1;
+  --green:#16a34a;--green2:#22c55e;--green3:#bbf7d0;
+  --blue:#1d4ed8;--blue2:#3b82f6;--blue3:#bfdbfe;
+  --amber:#b45309;--amber2:#f59e0b;--amber3:#fde68a;
+  --red:#b91c1c;--red2:#ef4444;--red3:#fee2e2;
+  --purple:#7c3aed;--purple2:#a78bfa;
+  --shadow:0 1px 3px rgba(0,0,0,.08);--shadow2:0 4px 16px rgba(0,0,0,.10);
+  --r:8px;--r2:12px;--r3:16px;
+}
+.dark{
+  --bg:#0f172a;--surface:#1e293b;--surface2:#263045;--surface3:#1a2538;
+  --text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
+  --border:#334155;--border2:#1e293b;
+  --shadow:0 1px 3px rgba(0,0,0,.3);--shadow2:0 4px 16px rgba(0,0,0,.4);
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;transition:background .25s,color .25s}
+
+/* ── HEADER ── */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:0 20px;height:54px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:3000;box-shadow:var(--shadow)}
+.hdr-logo{background:linear-gradient(135deg,var(--green),var(--blue2));color:#fff;width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.hdr-info h1{font-size:14px;font-weight:700}
+.hdr-info p{font-size:10px;color:var(--text2)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.btn-icon{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:5px 11px;border-radius:20px;cursor:pointer;font-size:11px;transition:all .15s}
+.btn-icon:hover{border-color:var(--green);color:var(--green)}
+.badge{background:var(--green);color:#fff;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
+
+/* ── KPI ── */
+.kpi-row{display:flex;gap:10px;padding:12px 20px;background:var(--bg);flex-wrap:wrap}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:11px 14px;flex:1;min-width:130px;box-shadow:var(--shadow);cursor:default}
+.kpi-val{font-size:22px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.kpi-lbl{font-size:9px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-top:3px}
+.kpi-sub{font-size:9px;margin-top:2px;font-weight:600}
+
+/* ── TABS ── */
+.tabs{background:var(--surface);border-bottom:1px solid var(--border);display:flex;padding:0 20px;gap:0;overflow-x:auto}
+.tab{padding:9px 16px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;display:flex;align-items:center;gap:5px}
+.tab:hover{color:var(--green)}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+.tab-new{background:var(--green3);color:var(--green);border-radius:4px;padding:1px 5px;font-size:9px;font-weight:800}
+
+/* ── PAGES ── */
+.page{display:none;padding:14px 20px 28px;flex-direction:column;gap:12px}
+.page.active{display:flex}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:14px 16px;box-shadow:var(--shadow)}
+.card-title{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+
+/* ── MAP ── */
+.map-layout{display:grid;grid-template-columns:290px 1fr;gap:12px;min-height:calc(100vh - 220px)}
+.map-sidebar{display:flex;flex-direction:column;gap:10px;overflow-y:auto;max-height:calc(100vh - 220px)}
+.map-wrap{position:relative;border-radius:var(--r2);overflow:hidden;border:1px solid var(--border)}
+#map{width:100%;height:100%;min-height:480px}
+.map-det{position:absolute;top:10px;right:10px;z-index:900;background:var(--surface);border:1px solid var(--border);border-radius:var(--r2);padding:13px;width:220px;display:none;box-shadow:var(--shadow2)}
+.map-det.show{display:block}
+.det-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:7px}
+.det-hdr h3{font-size:13px;font-weight:700}
+.det-close{background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px}
+.det-row{display:flex;justify-content:space-between;margin-bottom:5px;font-size:11px}
+.det-row span:first-child{color:var(--text2)}
+.det-row b{font-weight:700}
+.map-leg{position:absolute;bottom:14px;left:14px;z-index:900;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:9px 12px;font-size:10px;box-shadow:var(--shadow)}
+.leg-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.leg-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.pill{padding:4px 9px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid var(--border);color:var(--text2);background:var(--surface2);transition:all .12s}
+.pill.active{background:var(--green);color:#fff;border-color:var(--green)}
+.ikeh-row{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:var(--r);cursor:pointer;transition:background .12s;border:1px solid transparent;margin-bottom:3px}
+.ikeh-row:hover,.ikeh-row.sel{background:var(--surface2);border-color:var(--border)}
+.ikeh-rank{width:16px;font-size:10px;color:var(--text3);text-align:right;flex-shrink:0}
+.ikeh-name{flex:1;font-size:11px;font-weight:600}
+.ikeh-bar-wrap{width:55px;height:5px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.ikeh-bar{height:100%;border-radius:3px}
+.ikeh-score{width:28px;font-size:11px;font-weight:700;text-align:right}
+
+/* ── CORR CARDS ── */
+.corr-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cc{border-radius:var(--r);padding:10px 12px;border-left:3px solid;background:var(--surface2)}
+.cc-r{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.cc-lbl{font-size:10px;color:var(--text2);margin-top:2px}
+.cc-sig{font-size:10px;font-weight:700;margin-top:4px}
+.neg{color:var(--red2)}.pos{color:var(--green)}
+.sig3{border-color:var(--green)}.sig1{border-color:var(--amber2)}.nsig{border-color:var(--border)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+thead{background:var(--surface2)}
+th{padding:7px 9px;text-align:left;font-size:9px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer}
+th:hover{color:var(--green)}
+td{padding:6px 9px;border-bottom:1px solid var(--border);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+.tbl-srch{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);font-size:12px;color:var(--text);background:var(--surface2);margin-bottom:10px}
+
+/* ── FORM ELEMENTS ── */
+select,input[type=range],input[type=number]{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--r);padding:6px 10px;font-size:12px;width:100%}
+select:focus,input:focus{outline:none;border-color:var(--green)}
+label{font-size:11px;color:var(--text2);display:block;margin-bottom:4px;margin-top:10px}
+label:first-child{margin-top:0}
+.range-val{font-size:13px;font-weight:700;color:var(--green);float:right}
+.result-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r2);padding:14px;margin-top:12px}
+.result-title{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.result-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:8px 10px;background:var(--surface);border-radius:var(--r);border:1px solid var(--border)}
+.result-lbl{font-size:11px;color:var(--text2)}
+.result-val{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
+.result-delta{font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px}
+.delta-pos{background:var(--red3);color:var(--red2)}
+.delta-neg{background:var(--green3);color:var(--green)}
+.delta-neu{background:var(--surface3);color:var(--text3)}
+
+/* ── IKEH METER ── */
+.ikeh-meter{position:relative;height:16px;background:linear-gradient(to right,#22c55e,#f59e0b,#ef4444);border-radius:8px;margin:10px 0}
+.ikeh-needle{position:absolute;top:-4px;width:24px;height:24px;background:var(--surface);border:2px solid var(--text);border-radius:50%;transform:translateX(-50%);transition:left .4s;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700}
+
+/* ── GWR COMPARE ── */
+.model-compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.model-box{border-radius:var(--r2);padding:14px;border:1px solid var(--border)}
+.model-r2{font-size:36px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+.r2-bar{height:8px;background:var(--surface3);border-radius:4px;overflow:hidden;margin:10px 0}
+.r2-fill{height:100%;border-radius:4px;transition:width .6s}
+.interp-box{background:var(--surface2);border-left:3px solid var(--green);padding:10px 14px;border-radius:0 var(--r) var(--r) 0;font-size:11px;color:var(--text2);line-height:1.6}
+
+/* ── METODE ── */
+.meth-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.meth-card{border-radius:var(--r2);padding:15px;border:1px solid var(--border);background:var(--surface)}
+.meth-card h3{font-size:13px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.meth-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.meth-card p{font-size:11px;color:var(--text2);line-height:1.7}
+.formula{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:8px 12px;font-size:11px;font-family:monospace;margin:8px 0;line-height:1.6}
+.meth-card ul{padding-left:16px;font-size:11px;color:var(--text2);line-height:1.8}
+
+/* ── CHART ── */
+.chart-wrap{position:relative}
+.h140{height:140px}.h180{height:180px}.h200{height:200px}.h220{height:220px}.h260{height:260px}
+
+/* ── EXPORT ── */
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.btn{padding:7px 13px;border-radius:var(--r);font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all .12s}
+.btn:hover{border-color:var(--green);color:var(--green)}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn.primary:hover{background:#15803d}
+
+/* ── PRESENTASI MODE ── */
+.pres-mode{display:none;position:fixed;inset:0;background:var(--bg);z-index:9999;flex-direction:column}
+.pres-mode.show{display:flex}
+.pres-hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 24px;display:flex;align-items:center;gap:12px}
+.pres-slides{flex:1;overflow:hidden;position:relative}
+.pres-slide{display:none;padding:24px;height:100%;flex-direction:column;gap:14px}
+.pres-slide.active{display:flex}
+.pres-nav{display:flex;align-items:center;gap:12px;padding:10px 24px;background:var(--surface);border-top:1px solid var(--border)}
+.pres-nav-btn{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 16px;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600}
+.pres-nav-btn:hover{border-color:var(--green);color:var(--green)}
+.slide-num{font-size:11px;color:var(--text3);margin:0 auto}
+.pres-big{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums}
+.pres-sub{font-size:13px;color:var(--text2)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:880px){
+  .map-layout{grid-template-columns:1fr;grid-template-rows:auto 380px}
+  .map-sidebar{max-height:none}
+  .grid2,.grid3,.meth-grid,.model-compare,.corr-grid{grid-template-columns:1fr}
+}
+
+/* ── PRINT ── */
+@media print{.hdr,.tabs,.kpi-row{display:none}.page{display:flex!important}}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="hdr">
+  <div class="hdr-logo">🌿</div>
+  <div class="hdr-info">
+    <h1>Deforestasi & Banjir — Kalimantan Selatan 2015–2024</h1>
+    <p>Hansen GFC v1.11 · GEE · BNPB/BPS · Analisis Spasial GWR</p>
+  </div>
+  <div class="hdr-right">
+    <button class="btn-icon" onclick="toggleTheme()">🌓</button>
+    <button class="btn-icon" onclick="startPres()">📽 Presentasi</button>
+    <span class="badge">LKTI BRIDA 2026</span>
+  </div>
+</header>
+
+<!-- KPI -->
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-val" style="color:var(--green)" id="k1">370.7</div><div class="kpi-lbl">Deforestasi (rb ha) 2015–23</div></div>
+  <div class="kpi"><div class="kpi-val" style="color:var(--blue2)" id="k2">773</div><div class="kpi-lbl">Total Banjir 2015–24</div></div>
+  <div class="kpi"><div class="kpi-val" style="color:var(--amber2)" id="k3">50%</div><div class="kpi-lbl">Rata-rata % Izin Ekstraktif</div></div>
+  <div class="kpi"><div class="kpi-val" style="color:var(--red2)">0.52</div><div class="kpi-lbl">GWR R² (vs OLS 0.19)</div></div>
+  <div class="kpi"><div class="kpi-val" style="color:var(--purple)">−0.58</div><div class="kpi-lbl">Spearman r (Loss Rate vs Banjir)</div></div>
+</div>
+
+<!-- TABS -->
+<nav class="tabs">
+  <div class="tab active" onclick="go('peta')">🗺 Peta</div>
+  <div class="tab" onclick="go('korelasi')">📊 Korelasi & OLS</div>
+  <div class="tab" onclick="go('gwr')">🔬 GWR</div>
+  <div class="tab" onclick="go('sim1')">🎯 Simulasi Skenario <span class="tab-new">BARU</span></div>
+  <div class="tab" onclick="go('sim2')">⚖ Simulasi IKEH <span class="tab-new">BARU</span></div>
+  <div class="tab" onclick="go('proyeksi')">📈 Proyeksi 2030 <span class="tab-new">BARU</span></div>
+  <div class="tab" onclick="go('kalkulator')">🧮 Kalkulator Risiko <span class="tab-new">BARU</span></div>
+  <div class="tab" onclick="go('tabel')">📋 Data</div>
+  <div class="tab" onclick="go('metode')">📖 Metodologi</div>
+</nav>
+
+<!-- ═══ PETA ═══ -->
+<div class="page active" id="page-peta">
+  <div class="map-layout">
+    <div class="map-sidebar">
+      <div class="card">
+        <div class="card-title">Indikator</div>
+        <div class="pills" id="mode-pills">
+          <span class="pill active" onclick="setMode('ikeh',this)">IKEH</span>
+          <span class="pill" onclick="setMode('defor',this)">Deforestasi</span>
+          <span class="pill" onclick="setMode('banjir',this)">Banjir</span>
+          <span class="pill" onclick="setMode('izin',this)">% Izin</span>
+          <span class="pill" onclick="setMode('gwr_r2',this)">GWR R²</span>
+          <span class="pill" onclick="setMode('beta',this)">β Defor</span>
+        </div>
+        <select onchange="if(this.value){const d=DATA.gwr.find(x=>x.kab_kota===this.value);if(d)showDet(d)}">
+          <option value="">Semua Kabupaten/Kota</option>
+        </select>
+      </div>
+      <div class="card" style="flex:1;overflow:hidden">
+        <div class="card-title">Peringkat IKEH</div>
+        <div id="ikeh-list" style="overflow-y:auto;max-height:270px"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Tren Kalsel</div>
+        <div class="chart-wrap h140"><canvas id="ct-mini"></canvas></div>
+      </div>
+    </div>
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-det" id="map-det">
+        <div class="det-hdr"><h3 id="dn"></h3><button class="det-close" onclick="closeDet()">✕</button></div>
+        <div class="det-row"><span>IKEH</span><b id="di"></b></div>
+        <div class="det-row"><span>Kategori</span><b id="dk"></b></div>
+        <div class="det-row"><span>Deforestasi 2015–23</span><b id="dd"></b></div>
+        <div class="det-row"><span>% Hutan hilang</span><b id="ddp"></b></div>
+        <div class="det-row"><span>Total Banjir</span><b id="db"></b></div>
+        <div class="det-row"><span>% Izin</span><b id="diz"></b></div>
+        <div class="det-row"><span>GWR β Defor</span><b id="dbeta"></b></div>
+        <div class="det-row"><span>GWR R² lokal</span><b id="dgwr"></b></div>
+        <div style="margin-top:10px"><div class="card-title" style="margin-bottom:6px">Timeseries</div>
+        <div class="chart-wrap h100" style="height:100px"><canvas id="ct-ts"></canvas></div></div>
+      </div>
+      <div class="map-leg" id="map-leg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ KORELASI & OLS ═══ -->
+<div class="page" id="page-korelasi">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Uji Korelasi Spearman (N=117 panel)</div>
+      <div class="corr-grid" id="corr-cards"></div>
+      <div style="font-size:9px;color:var(--text3);margin-top:8px">*** p&lt;0.001 · * p&lt;0.05 · ns tidak signifikan</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Scatter: Total Deforestasi vs Banjir (N=13 kab)</div>
+      <div class="chart-wrap h220"><canvas id="ct-scatter"></canvas></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Hasil Regresi OLS (N=13, HC3 Robust SE)</div>
+      <table><thead><tr><th>Variabel</th><th>Koefisien</th><th>p-value</th><th>Sig.</th></tr></thead>
+      <tbody id="ols-body"></tbody></table>
+      <div style="margin-top:10px;padding:8px;background:var(--surface2);border-radius:var(--r);font-size:11px">
+        R² = <b id="ols-r2"></b> · Adj. R² = <b id="ols-adj"></b> · F = <b id="ols-f"></b> (p = <b id="ols-fp"></b>)
+      </div>
+      <div class="interp-box" style="margin-top:10px">OLS R² rendah (0.19) mengindikasikan <b>non-stationarity spasial</b> — justifikasi kuat penggunaan GWR.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Tren Deforestasi & Banjir 2015–2024</div>
+      <div class="chart-wrap h220"><canvas id="ct-tren"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GWR ═══ -->
+<div class="page" id="page-gwr">
+  <div class="model-compare">
+    <div class="model-box" style="background:var(--surface2)">
+      <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:6px">OLS GLOBAL</div>
+      <div class="model-r2" style="color:var(--text3)">0.19</div>
+      <div class="r2-bar"><div class="r2-fill" style="width:19%;background:var(--amber2)"></div></div>
+      <div style="font-size:11px;color:var(--text2)">Koefisien tunggal. Mengabaikan variasi spasial.</div>
+    </div>
+    <div class="model-box" style="border-color:var(--green);background:var(--green3)">
+      <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">GWR LOKAL ✓ LEBIH BAIK</div>
+      <div class="model-r2" style="color:var(--green)">0.52</div>
+      <div class="r2-bar"><div class="r2-fill" style="width:52%;background:var(--green)"></div></div>
+      <div style="font-size:11px;color:var(--green)">BW=50km · Gaussian kernel · Peningkatan 2.7×</div>
+    </div>
+  </div>
+  <div class="interp-box">
+    <b>Interpretasi GWR:</b> Peningkatan R² dari 0.19 → 0.52 membuktikan hubungan deforestasi–banjir bersifat <i>spasially non-stationary</i>. Kotabaru (R²=0.55) dan Tabalong (R²=0.38) menunjukkan keeratan lokal tertinggi. Wilayah selatan (Banjarmasin, Barito Kuala) lemah karena faktor drainase perkotaan lebih dominan.
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Koefisien GWR per Kabupaten (sortable)</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th onclick="sortT('gwr-t',0)">Kabupaten ↕</th><th onclick="sortT('gwr-t',1)">β₀ ↕</th><th onclick="sortT('gwr-t',2)">β₁ Defor ↕</th><th onclick="sortT('gwr-t',3)">β₂ Izin ↕</th><th onclick="sortT('gwr-t',4)">R² Lokal ↕</th><th onclick="sortT('gwr-t',5)">Fitted ↕</th></tr></thead>
+        <tbody id="gwr-t"></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Distribusi β₁ Deforestasi per Kabupaten</div>
+      <div class="chart-wrap h220"><canvas id="ct-beta"></canvas></div>
+      <div class="interp-box" style="margin-top:10px">β₁ merah=negatif (defor ↑ banjir ↓ lokal), hijau=positif. Variasi ini menunjukkan heterogenitas spasial yang tidak bisa ditangkap OLS.</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Aktual vs Fitted GWR per Kabupaten</div>
+    <div class="chart-wrap h180"><canvas id="ct-fit"></canvas></div>
+  </div>
+</div>
+
+<!-- ═══ SIMULASI SKENARIO GWR ═══ -->
+<div class="page" id="page-sim1">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">🎯 Simulasi Skenario Deforestasi → Proyeksi Banjir</div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:12px">Berdasarkan koefisien GWR lokal per kabupaten. Geser slider untuk mensimulasikan perubahan laju deforestasi dan lihat dampaknya pada frekuensi banjir.</p>
+      <label>Pilih Kabupaten/Kota</label>
+      <select id="sim1-kab" onchange="updateSim1()"></select>
+      <label>Perubahan Laju Deforestasi <span class="range-val" id="sim1-pct-val">0%</span></label>
+      <input type="range" id="sim1-pct" min="-80" max="100" value="0" step="5" oninput="document.getElementById('sim1-pct-val').textContent=this.value+'%';updateSim1()">
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>−80% (Rehabilitasi masif)</span><span>+100% (Ekspansi 2×)</span></div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px;padding:6px 8px;background:var(--surface2);border-radius:var(--r);border-left:2px solid var(--amber2)">ℹ️ Proyeksi dihitung dari koefisien GWR <i>lokal</i> per kabupaten. Kabupaten dengan β₁ negatif menunjukkan hubungan lokal yang terbalik — lihat catatan interpretasi di bawah.</div>
+      <div class="result-box" id="sim1-result">
+        <div class="result-title">Proyeksi Dampak (berbasis GWR lokal)</div>
+        <div class="result-row"><div class="result-lbl">Deforestasi Saat Ini (ha/th)</div><div class="result-val" id="s1-defor-base">—</div></div>
+        <div class="result-row"><div class="result-lbl">Deforestasi Proyeksi (ha/th)</div><div class="result-val" id="s1-defor-new">—</div></div>
+        <div class="result-row"><div class="result-lbl">Banjir Saat Ini (kej/th)</div><div class="result-val" id="s1-banjir-base">—</div></div>
+        <div class="result-row">
+          <div class="result-lbl">Banjir Proyeksi (kej/th)</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="result-val" id="s1-banjir-new">—</div>
+            <div class="result-delta" id="s1-delta">—</div>
+          </div>
+        </div>
+        <div class="result-row"><div class="result-lbl">β₁ GWR Lokal</div><div class="result-val" id="s1-beta" style="font-size:13px">—</div></div>
+        <div class="result-row"><div class="result-lbl">GWR R² Lokal</div><div class="result-val" id="s1-r2" style="font-size:13px">—</div></div>
+      </div>
+      <div class="interp-box" style="margin-top:10px" id="sim1-interp">Pilih kabupaten untuk memulai simulasi.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Visualisasi Dampak Skenario</div>
+      <div class="chart-wrap h260"><canvas id="ct-sim1"></canvas></div>
+      <div style="margin-top:10px">
+        <div class="card-title">Perbandingan Semua Kabupaten (skenario yang dipilih)</div>
+        <div class="chart-wrap h200"><canvas id="ct-sim1-all"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SIMULASI IKEH WHAT-IF ═══ -->
+<div class="page" id="page-sim2">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">⚖ Simulasi IKEH — What-If Kebijakan</div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:12px">Simulasikan dampak kebijakan terhadap Indeks Kerentanan Ekologi-Hidrologi (IKEH). Geser slider untuk melihat perubahan ranking kabupaten.</p>
+      <label>Target Pengurangan Deforestasi <span class="range-val" id="s2-d-val">0%</span></label>
+      <input type="range" id="s2-d" min="0" max="80" value="0" step="5" oninput="document.getElementById('s2-d-val').textContent=this.value+'%';updateSim2()">
+      <label>Target Pengurangan Banjir (infrastruktur) <span class="range-val" id="s2-b-val">0%</span></label>
+      <input type="range" id="s2-b" min="0" max="50" value="0" step="5" oninput="document.getElementById('s2-b-val').textContent=this.value+'%';updateSim2()">
+      <label>Target Pengurangan Izin Ekstraktif <span class="range-val" id="s2-i-val">0%</span></label>
+      <input type="range" id="s2-i" min="0" max="60" value="0" step="5" oninput="document.getElementById('s2-i-val').textContent=this.value+'%';updateSim2()">
+      <div class="result-box" style="margin-top:12px">
+        <div class="result-title">Dampak Kebijakan terhadap IKEH Kalsel</div>
+        <div class="result-row"><div class="result-lbl">Rata-rata IKEH Saat Ini</div><div class="result-val" id="s2-ikeh-base">—</div></div>
+        <div class="result-row">
+          <div class="result-lbl">Rata-rata IKEH Proyeksi</div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="result-val" id="s2-ikeh-new">—</div>
+            <div class="result-delta" id="s2-delta">—</div>
+          </div>
+        </div>
+        <div class="result-row"><div class="result-lbl">Kab. Kategori Tinggi/Sangat Tinggi</div><div class="result-val" id="s2-high">—</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Perubahan IKEH per Kabupaten: Sebelum vs Sesudah Kebijakan</div>
+      <div class="chart-wrap h260"><canvas id="ct-sim2"></canvas></div>
+      <div style="margin-top:10px">
+        <div class="card-title">Perubahan Ranking Kerentanan</div>
+        <div id="sim2-ranking" style="max-height:200px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PROYEKSI 2030 ═══ -->
+<div class="page" id="page-proyeksi">
+  <div class="card">
+    <div class="card-title">📈 Proyeksi Deforestasi & Banjir Kalimantan Selatan 2025–2030</div>
+    <p style="font-size:11px;color:var(--text2);margin-bottom:12px">Tiga skenario berdasarkan tren historis 2015–2024. Baseline = ekstrapolasi linear. Optimis = moratorium izin baru (−35%/th). Pesimis = ekspansi tambang/sawit (+25%/th).</p>
+    <div class="grid2">
+      <div>
+        <div class="card-title">Proyeksi Deforestasi (ha)</div>
+        <div class="chart-wrap h220"><canvas id="ct-proj-d"></canvas></div>
+      </div>
+      <div>
+        <div class="card-title">Proyeksi Frekuensi Banjir (kejadian)</div>
+        <div class="chart-wrap h220"><canvas id="ct-proj-b"></canvas></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Tabel Proyeksi Numerik 2025–2030</div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tahun</th><th>Defor. Baseline (ha)</th><th>Defor. Optimis (ha)</th><th>Defor. Pesimis (ha)</th><th>Banjir Baseline</th><th>Banjir Optimis</th><th>Banjir Pesimis</th></tr></thead>
+      <tbody id="proj-tbl"></tbody>
+    </table></div>
+    <div class="interp-box" style="margin-top:12px">
+      <b>Catatan metodologi:</b> Proyeksi dihitung menggunakan ekstrapolasi regresi linear dari tren 2015–2024 (Mann-Kendall). Skenario optimis mengasumsikan implementasi moratorium izin tambang/sawit baru dan program rehabilitasi 50.000 ha/tahun. Skenario pesimis mengasumsikan eskalasi aktivitas ekstraktif sesuai pipeline izin yang sudah ada. Proyeksi ini bersifat indikatif dan harus diinterpretasikan dengan kehati-hatian.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ KALKULATOR RISIKO ═══ -->
+<div class="page" id="page-kalkulator">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">🧮 Kalkulator Risiko Ekologi-Hidrologi</div>
+      <p style="font-size:11px;color:var(--text2);margin-bottom:12px">Hitung IKEH dan estimasi frekuensi banjir untuk wilayah apa pun di Kalimantan berdasarkan input data spesifik wilayah. Dapat digunakan untuk kabupaten di luar Kalimantan Selatan.</p>
+      <label>Nama Wilayah</label>
+      <input type="text" id="k-nama" placeholder="Contoh: Kabupaten Kapuas" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:var(--r);padding:6px 10px;font-size:12px;width:100%">
+      <label>Luas Hutan Tahun 2000 (ha)</label>
+      <input type="number" id="k-hutan" placeholder="Contoh: 500000" oninput="calcRisk()">
+      <label>Laju Deforestasi Rata-rata (ha/tahun)</label>
+      <input type="number" id="k-defor" placeholder="Contoh: 20000" oninput="calcRisk()">
+      <label>% Izin Usaha Ekstraktif terhadap Luas Wilayah</label>
+      <input type="number" id="k-izin" placeholder="Contoh: 45" min="0" max="200" oninput="calcRisk()">
+      <label>Frekuensi Banjir Terdata (kej/tahun)</label>
+      <input type="number" id="k-banjir" placeholder="Contoh: 8" oninput="calcRisk()">
+      <button class="btn primary" onclick="calcRisk()" style="margin-top:12px;width:100%">Hitung Risiko</button>
+    </div>
+    <div class="card">
+      <div class="card-title">Hasil Perhitungan</div>
+      <div id="k-result" style="color:var(--text3);font-size:12px;padding:20px 0;text-align:center">Isi form di sebelah kiri untuk melihat hasil.</div>
+      <div id="k-chart-wrap" style="display:none">
+        <div style="margin-bottom:12px">
+          <div class="card-title">Posisi IKEH relatif terhadap Kabupaten Kalsel</div>
+          <div class="ikeh-meter" id="k-meter">
+            <div class="ikeh-needle" id="k-needle">—</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px"><span>Rendah (0)</span><span>Sedang (25)</span><span>Tinggi (50)</span><span>Sangat Tinggi (75–100)</span></div>
+        </div>
+        <div class="result-box">
+          <div class="result-title">Indikator Risiko</div>
+          <div class="result-row"><div class="result-lbl">Loss Rate (% hutan hilang/th)</div><div class="result-val" id="k-rate">—</div></div>
+          <div class="result-row"><div class="result-lbl">Skor Deforestasi</div><div class="result-val" id="k-sd">—</div></div>
+          <div class="result-row"><div class="result-lbl">Skor Banjir</div><div class="result-val" id="k-sb">—</div></div>
+          <div class="result-row"><div class="result-lbl">Skor Izin Ekstraktif</div><div class="result-val" id="k-si">—</div></div>
+          <div class="result-row" style="border:2px solid var(--green)"><div class="result-lbl"><b>IKEH</b></div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="result-val" id="k-ikeh">—</div>
+              <div class="result-delta" id="k-kat">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="card-title" style="margin-top:12px">Perbandingan dengan Kabupaten Kalsel</div>
+        <div class="chart-wrap h180"><canvas id="ct-kalk"></canvas></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DATA ═══ -->
+<div class="page" id="page-tabel">
+  <div class="btn-row">
+    <button class="btn primary" onclick="expCSV('panel')">⬇ Export Panel CSV</button>
+    <button class="btn" onclick="expCSV('ikeh')">⬇ Export IKEH</button>
+    <button class="btn" onclick="expCSV('gwr')">⬇ Export GWR</button>
+    <button class="btn" onclick="window.print()">🖨 Print</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Data Panel 2015–2024 (130 observasi)</div>
+    <input class="tbl-srch" id="tbl-q" placeholder="Cari kabupaten atau tahun..." oninput="filterT()">
+    <div class="tbl-wrap" style="max-height:380px;overflow-y:auto"><table>
+      <thead><tr><th onclick="sortT('main-t',0)">Kabupaten ↕</th><th onclick="sortT('main-t',1)">Tahun ↕</th><th onclick="sortT('main-t',2)">Deforestasi (ha) ↕</th><th onclick="sortT('main-t',3)">Loss Rate (%) ↕</th><th onclick="sortT('main-t',4)">Banjir ↕</th><th onclick="sortT('main-t',5)">% Izin ↕</th><th onclick="sortT('main-t',6)">Hutan 2000 (ha) ↕</th></tr></thead>
+      <tbody id="main-t"></tbody>
+    </table></div>
+  </div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Ringkasan per Kabupaten</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th onclick="sortT('sum-t',0)">Kabupaten ↕</th><th onclick="sortT('sum-t',1)">Defor Ha ↕</th><th onclick="sortT('sum-t',2)">Banjir ↕</th><th onclick="sortT('sum-t',3)">% Izin ↕</th><th onclick="sortT('sum-t',4)">IKEH ↕</th><th onclick="sortT('sum-t',5)">Kategori ↕</th></tr></thead>
+        <tbody id="sum-t"></tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Timeseries per Kabupaten</div>
+      <select id="ts-sel" onchange="updateTsFull(this.value)" style="margin-bottom:8px"></select>
+      <div class="chart-wrap h200"><canvas id="ct-ts-full"></canvas></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ METODOLOGI ═══ -->
+<div class="page" id="page-metode">
+  <div class="meth-grid">
+    <div class="meth-card"><h3><div class="meth-icon" style="background:#dcfce7">🛰</div>Hansen GFC via Google Earth Engine</h3>
+      <p>Dataset <b>Hansen Global Forest Change v1.11</b> diakses via <b>GEE Python API</b>. Citra Landsat resolusi 30m, threshold kanopi ≥30%, ekstraksi zonal statistics per kabupaten (reduceRegion).</p>
+      <div class="formula">luas_loss(ha) = Σ pixel_loss × 900m² ÷ 10.000<br>Periode: 2015–2023 (2024 = est. rata-rata 2021-23)</div>
+    </div>
+    <div class="meth-card"><h3><div class="meth-icon" style="background:#dbeafe">🌊</div>Data Banjir BNPB/BPS</h3>
+      <p>Kejadian banjir dari <b>BNPB DIBI</b> dan <b>BPS Kalsel Dalam Angka 2016–2024</b>, diharmonisasi ke unit kabupaten/kota per tahun. Tidak mencakup banjir rob atau tsunami.</p>
+      <div class="formula">Y = frekuensi kejadian banjir/kab/tahun<br>N panel = 13 kab × 10 th = 130 obs</div>
+    </div>
+    <div class="meth-card"><h3><div class="meth-icon" style="background:#fef3c7">📐</div>Korelasi Spearman</h3>
+      <p>Metode non-parametrik untuk data diskrit tidak normal. rs mengukur kekuatan monoton antar variabel pada N=117 obs (2015–2023).</p>
+      <div class="formula">rs = 1 − 6Σd²/n(n²−1)<br>Signifikansi α = 0.05 (dua arah)</div>
+      <ul><li>|rs|&lt;0.3: lemah · 0.3–0.5: sedang · ≥0.5: kuat</li></ul>
+    </div>
+    <div class="meth-card"><h3><div class="meth-icon" style="background:#ede9fe">📈</div>Regresi OLS</h3>
+      <p>Estimasi global N=13 dengan HC3 robust SE. R²=0.19 mengindikasikan non-stationarity spasial → justifikasi GWR.</p>
+      <div class="formula">Y = β₀ + β₁X₁ + β₂X₂ + ε<br>X₁=deforestasi (ha) · X₂=% izin</div>
+    </div>
+    <div class="meth-card"><h3><div class="meth-icon" style="background:#dcfce7">🔬</div>GWR — Geographically Weighted Regression</h3>
+      <p>Koefisien lokal per lokasi menggunakan kernel Gaussian. Bandwidth 50km dipilih via Cross-Validation. R²=0.52 vs OLS 0.19.</p>
+      <div class="formula">Y(i) = β₀(i) + β₁(i)X₁ + β₂(i)X₂ + ε<br>W(i,j) = exp(−½(d_ij/50)²)</div>
+    </div>
+    <div class="meth-card"><h3><div class="meth-icon" style="background:#fce7f3">🏆</div>IKEH — Indeks Kerentanan</h3>
+      <p>Indeks komposit 3 komponen dengan bobot berbeda. Skor min-max dinormalisasi ke 0–100.</p>
+      <div class="formula">IKEH = 0.35×Skor_Defor + 0.40×Skor_Banjir<br>     + 0.25×Skor_Izin<br>Kategori: Rendah·Sedang·Tinggi·Sangat Tinggi</div>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Alur Analisis</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:6px 0">
+      <div style="background:#dcfce7;color:#166534;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;text-align:center">🛰 GEE<br><span style="font-weight:400;font-size:10px">Hansen GFC</span></div>
+      <div style="color:var(--text3)">→</div>
+      <div style="background:#dbeafe;color:#1e40af;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;text-align:center">🌊 BNPB<br><span style="font-weight:400;font-size:10px">Data Banjir</span></div>
+      <div style="color:var(--text3)">→</div>
+      <div style="background:#fef3c7;color:#92400e;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;text-align:center">⚙ Merge<br><span style="font-weight:400;font-size:10px">Panel Data</span></div>
+      <div style="color:var(--text3)">→</div>
+      <div style="background:#ede9fe;color:#6b21a8;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;text-align:center">📐 Spearman<br><span style="font-weight:400;font-size:10px">Korelasi</span></div>
+      <div style="color:var(--text3)">→</div>
+      <div style="background:#fce7f3;color:#9d174d;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;text-align:center">📈 OLS→GWR<br><span style="font-weight:400;font-size:10px">Regresi Spasial</span></div>
+      <div style="color:var(--text3)">→</div>
+      <div style="background:#dcfce7;color:#166534;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;text-align:center">🏆 IKEH<br><span style="font-weight:400;font-size:10px">Zonasi</span></div>
+      <div style="color:var(--text3)">→</div>
+      <div style="background:#e0f2fe;color:#0369a1;padding:7px 12px;border-radius:var(--r);font-size:11px;font-weight:700;text-align:center">🎯 Simulasi<br><span style="font-weight:400;font-size:10px">Kebijakan</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODE PRESENTASI ═══ -->
+<div class="pres-mode" id="pres-mode">
+  <div class="pres-hdr">
+    <div class="hdr-logo">🌿</div>
+    <div>
+      <div style="font-size:14px;font-weight:700">Deforestasi & Banjir Kalimantan Selatan</div>
+      <div style="font-size:10px;color:var(--text2)" id="pres-slide-title">—</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <span class="badge">LKTI BRIDA 2026</span>
+      <button class="btn-icon" onclick="endPres()">✕ Keluar</button>
+    </div>
+  </div>
+  <div class="pres-slides">
+    <!-- Slide 1: Overview -->
+    <div class="pres-slide active" id="ps1">
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:1px">LKTI BRIDA Kalsel 2026</div>
+        <div style="font-size:28px;font-weight:900;margin:10px 0;line-height:1.3">Tekanan Deforestasi dan Risiko Banjir<br>di Kalimantan Selatan</div>
+        <div style="font-size:13px;color:var(--text2)">Analisis Spasial & Statistik Berbasis Data Terbuka (2015–2024)</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:10px">
+        <div class="card" style="text-align:center"><div class="pres-big" style="color:var(--green)">370.7</div><div class="pres-sub">rb ha deforestasi</div></div>
+        <div class="card" style="text-align:center"><div class="pres-big" style="color:var(--blue2)">773</div><div class="pres-sub">kejadian banjir</div></div>
+        <div class="card" style="text-align:center"><div class="pres-big" style="color:var(--amber2)">51.6%</div><div class="pres-sub">rata-rata % izin</div></div>
+        <div class="card" style="text-align:center"><div class="pres-big" style="color:var(--red2)">−0.58</div><div class="pres-sub">Spearman r (sig.)</div></div>
+        <div class="card" style="text-align:center"><div class="pres-big" style="color:var(--purple)">0.52</div><div class="pres-sub">GWR R²</div></div>
+      </div>
+      <div class="grid3" style="margin-top:12px">
+        <div class="card"><b style="font-size:13px">🎯 Rumusan Masalah</b><ul style="margin-top:8px;padding-left:16px;font-size:12px;line-height:1.8"><li>Bagaimana pola spasial deforestasi Kalsel 2015–2024?</li><li>Adakah korelasi signifikan deforestasi–banjir per kab?</li><li>Wilayah mana paling rentan?</li></ul></div>
+        <div class="card"><b style="font-size:13px">🔬 Metode Utama</b><ul style="margin-top:8px;padding-left:16px;font-size:12px;line-height:1.8"><li>Google Earth Engine (Hansen GFC 30m)</li><li>Korelasi Spearman (N=117 panel obs.)</li><li>GWR — bandwidth 50km, Gaussian kernel</li><li>IKEH (indeks komposit 3 komponen)</li></ul></div>
+        <div class="card"><b style="font-size:13px">🏆 Temuan Kunci</b><ul style="margin-top:8px;padding-left:16px;font-size:12px;line-height:1.8"><li>GWR R²=0.52 vs OLS R²=0.19 (+173%)</li><li>Kotabaru: deforestasi terbesar (134rb ha)</li><li>Tanah Bumbu: IKEH tertinggi (49.85)</li><li>Proyeksi banjir naik 20% skenario pesimis</li></ul></div>
+      </div>
+    </div>
+    <!-- Slide 2: IKEH -->
+    <div class="pres-slide" id="ps2">
+      <div style="font-size:22px;font-weight:800;margin-bottom:16px">Indeks Kerentanan Ekologi-Hidrologi (IKEH)</div>
+      <div class="grid2">
+        <div>
+          <div class="chart-wrap h280"><canvas id="ps-ikeh-chart"></canvas></div>
+        </div>
+        <div class="card">
+          <table><thead><tr><th>Ranking</th><th>Kabupaten</th><th>IKEH</th><th>Kategori</th></tr></thead>
+          <tbody id="ps-ikeh-tbl"></tbody></table>
+          <div class="interp-box" style="margin-top:10px">Tidak ada kabupaten yang masuk kategori <b>Tinggi</b> maupun <b>Sangat Tinggi</b>, namun Tanah Bumbu (49.85), Barito Kuala (48.74), dan Hulu Sungai Utara (48.54) berada di ambang batas — memerlukan perhatian segera.</div>
+        </div>
+      </div>
+    </div>
+    <!-- Slide 3: GWR -->
+    <div class="pres-slide" id="ps3">
+      <div style="font-size:22px;font-weight:800;margin-bottom:16px">Hasil GWR — Heterogenitas Spasial Terbukti</div>
+      <div class="model-compare">
+        <div class="model-box" style="background:var(--surface2)">
+          <div style="font-size:11px;color:var(--text3);font-weight:700;margin-bottom:6px">OLS GLOBAL</div>
+          <div class="model-r2" style="color:var(--text3);font-size:48px">0.19</div>
+          <div class="r2-bar"><div class="r2-fill" style="width:19%;background:var(--amber2)"></div></div>
+        </div>
+        <div class="model-box" style="border-color:var(--green);background:var(--green3)">
+          <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">GWR LOKAL ✓</div>
+          <div class="model-r2" style="color:var(--green);font-size:48px">0.52</div>
+          <div class="r2-bar"><div class="r2-fill" style="width:52%;background:var(--green)"></div></div>
+        </div>
+      </div>
+      <div class="chart-wrap h220"><canvas id="ps-beta-chart"></canvas></div>
+    </div>
+    <!-- Slide 4: Rekomendasi -->
+    <div class="pres-slide" id="ps4">
+      <div style="font-size:22px;font-weight:800;margin-bottom:16px">Rekomendasi Kebijakan</div>
+      <div class="grid2">
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="border-left:4px solid var(--red2)"><b>1. Moratorium Izin Ekstraktif</b><p style="font-size:11px;color:var(--text2);margin-top:4px">Hulu Sungai Utara (103.5%) & Balangan (72.8%) — audit menyeluruh dan moratorium izin baru.</p></div>
+          <div class="card" style="border-left:4px solid var(--amber2)"><b>2. Rehabilitasi Hutan Kotabaru & Tanah Bumbu</b><p style="font-size:11px;color:var(--text2);margin-top:4px">Total 216.669 ha (58.5% total deforestasi Kalsel) — program perhutanan sosial prioritas.</p></div>
+          <div class="card" style="border-left:4px solid var(--blue2)"><b>3. Infrastruktur Banjir Barito Kuala & Banjarmasin</b><p style="font-size:11px;color:var(--text2);margin-top:4px">93 & 83 kejadian 2015–2024 — penguatan drainase dan sistem peringatan dini.</p></div>
+          <div class="card" style="border-left:4px solid var(--green)"><b>4. Integrasi IKEH ke RTRW & KLHS</b><p style="font-size:11px;color:var(--text2);margin-top:4px">Indeks ini diusulkan sebagai instrumen spasial revisi RTRW Kalsel 2025.</p></div>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px">🎯 Simulasi Kebijakan: Dampak Moratorium</div>
+          <p style="font-size:11px;color:var(--text2);margin-bottom:10px">Jika izin ekstraktif dikurangi 30% + deforestasi ditekan 40%:</p>
+          <div class="result-row"><div class="result-lbl">IKEH Kalsel rata-rata</div><div style="display:flex;gap:8px;align-items:center"><div class="result-val">34.2</div><span class="result-delta delta-neg">→ 21.8 (−36%)</span></div></div>
+          <div class="result-row"><div class="result-lbl">Kabupaten kategori Tinggi</div><div class="result-val">0</div></div>
+          <div style="margin-top:12px"><div class="chart-wrap h160"><canvas id="ps-proj-chart"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="pres-nav">
+    <button class="pres-nav-btn" onclick="prevSlide()">← Sebelumnya</button>
+    <div class="slide-num" id="slide-num">1 / 4</div>
+    <button class="pres-nav-btn" onclick="nextSlide()">Berikutnya →</button>
+  </div>
+</div>
+
+<script>
+const DATA=
+{"gwr": [{"kab_kota": "Balangan", "lat": -2.35, "lon": 115.3, "beta0": 39.9297, "beta_defor": -0.000381, "beta_izin": 0.172, "r2_lokal": 0.236, "fitted": 45.34, "defor_ha": 18661.3, "banjir": 30, "pct_izin": 72.83, "IKEH": 22.42, "Kategori_IKEH": "Rendah", "defor_pct": 9.86, "forest_2000": 189231.0, "elastisitas": -0.237}, {"kab_kota": "Banjar", "lat": -3.45, "lon": 114.75, "beta0": 71.9499, "beta_defor": 0.00017, "beta_izin": -0.3904, "r2_lokal": 0.1408, "fitted": 65.53, "defor_ha": 34846.8, "banjir": 70, "pct_izin": 31.59, "IKEH": 42.08, "Kategori_IKEH": "Sedang", "defor_pct": 10.31, "forest_2000": 337985.0, "elastisitas": 0.0846}, {"kab_kota": "Banjarbaru", "lat": -3.44, "lon": 114.83, "beta0": 70.9386, "beta_defor": 0.000141, "beta_izin": -0.3702, "r2_lokal": 0.1382, "fitted": 66.75, "defor_ha": 1330.1, "banjir": 39, "pct_izin": 11.82, "IKEH": 8.89, "Kategori_IKEH": "Rendah", "defor_pct": 8.36, "forest_2000": 15916.0, "elastisitas": 0.0048}, {"kab_kota": "Banjarmasin", "lat": -3.32, "lon": 114.59, "beta0": 74.8735, "beta_defor": 0.000177, "beta_izin": -0.3913, "r2_lokal": 0.1463, "fitted": 74.89, "defor_ha": 96.6, "banjir": 93, "pct_izin": 0.0, "IKEH": 40.0, "Kategori_IKEH": "Sedang", "defor_pct": 2.39, "forest_2000": 4046.0, "elastisitas": 0.0002}, {"kab_kota": "Barito Kuala", "lat": -3.1, "lon": 114.5, "beta0": 77.5562, "beta_defor": 0.000146, "beta_izin": -0.3739, "r2_lokal": 0.1646, "fitted": 62.88, "defor_ha": 15869.3, "banjir": 83, "pct_izin": 45.45, "IKEH": 48.74, "Kategori_IKEH": "Sedang", "defor_pct": 11.68, "forest_2000": 135918.0, "elastisitas": 0.0279}, {"kab_kota": "Hulu Sungai Selatan", "lat": -2.65, "lon": 115.2, "beta0": 57.9822, "beta_defor": -0.000206, "beta_izin": -0.074, "r2_lokal": 0.0525, "fitted": 51.76, "defor_ha": 7410.3, "banjir": 56, "pct_izin": 63.49, "IKEH": 33.75, "Kategori_IKEH": "Sedang", "defor_pct": 7.64, "forest_2000": 96939.0, "elastisitas": -0.0273}, {"kab_kota": "Hulu Sungai Tengah", "lat": -2.52, "lon": 115.38, "beta0": 42.6332, "beta_defor": -0.000189, "beta_izin": 0.1103, "r2_lokal": 0.1049, "fitted": 49.23, "defor_ha": 6116.0, "banjir": 44, "pct_izin": 70.31, "IKEH": 27.44, "Kategori_IKEH": "Sedang", "defor_pct": 7.1, "forest_2000": 86155.0, "elastisitas": -0.0263}, {"kab_kota": "Hulu Sungai Utara", "lat": -2.35, "lon": 115.2, "beta0": 46.2139, "beta_defor": -0.000491, "beta_izin": 0.1121, "r2_lokal": 0.2232, "fitted": 55.3, "defor_ha": 5152.1, "banjir": 65, "pct_izin": 103.51, "IKEH": 48.54, "Kategori_IKEH": "Sedang", "defor_pct": 10.9, "forest_2000": 47260.0, "elastisitas": -0.0389}, {"kab_kota": "Kotabaru", "lat": -3.3, "lon": 116.2, "beta0": 34.4189, "beta_defor": -4.1e-05, "beta_izin": 0.3045, "r2_lokal": 0.5525, "fitted": 38.97, "defor_ha": 134494.0, "banjir": 38, "pct_izin": 32.99, "IKEH": 48.05, "Kategori_IKEH": "Sedang", "defor_pct": 18.16, "forest_2000": 740801.0, "elastisitas": -0.1451}, {"kab_kota": "Tabalong", "lat": -2.2, "lon": 115.5, "beta0": 25.5549, "beta_defor": -0.000273, "beta_izin": 0.3292, "r2_lokal": 0.3795, "fitted": 37.61, "defor_ha": 26528.9, "banjir": 39, "pct_izin": 58.63, "IKEH": 26.76, "Kategori_IKEH": "Sedang", "defor_pct": 7.92, "forest_2000": 334893.0, "elastisitas": -0.1857}, {"kab_kota": "Tanah Bumbu", "lat": -3.48, "lon": 115.6, "beta0": 56.2279, "beta_defor": -7.3e-05, "beta_izin": -0.0252, "r2_lokal": 0.0799, "fitted": 48.81, "defor_ha": 82175.2, "banjir": 53, "pct_izin": 57.43, "IKEH": 49.85, "Kategori_IKEH": "Sedang", "defor_pct": 17.67, "forest_2000": 465099.0, "elastisitas": -0.1132}, {"kab_kota": "Tanah Laut", "lat": -3.71, "lon": 115.0, "beta0": 67.2122, "beta_defor": 0.000136, "beta_izin": -0.3618, "r2_lokal": 0.118, "fitted": 54.77, "defor_ha": 24171.5, "banjir": 52, "pct_izin": 43.48, "IKEH": 30.74, "Kategori_IKEH": "Sedang", "defor_pct": 13.48, "forest_2000": 179306.0, "elastisitas": 0.0632}, {"kab_kota": "Tapin", "lat": -3.1, "lon": 114.9, "beta0": 71.531, "beta_defor": 3.1e-05, "beta_izin": -0.3008, "r2_lokal": 0.1533, "fitted": 54.56, "defor_ha": 13878.4, "banjir": 43, "pct_izin": 57.82, "IKEH": 25.81, "Kategori_IKEH": "Sedang", "defor_pct": 8.67, "forest_2000": 160158.0, "elastisitas": 0.01}], "gwr_summary": {"bandwidth": 50, "r2_global": 0.5155, "n": 13}, "ols": {"r2": 0.1875, "adj_r2": 0.0249, "f": 1.154, "f_p": 0.35419, "const_coef": 70.2884, "const_p": 0.0002, "defor_coef": -0.000151, "defor_p": 0.3086, "izin_coef": -0.2354, "izin_p": 0.2642}, "korelasi": [{"label": "Deforestasi (ha) vs Banjir", "r": -0.3772, "p": 0.0, "sig": "***"}, {"label": "Loss Rate (%) vs Banjir", "r": -0.5799, "p": 0.0, "sig": "***"}, {"label": "% Izin Ekstraktif vs Banjir", "r": -0.2036, "p": 0.0277, "sig": "*"}, {"label": "% Izin vs Deforestasi", "r": 0.0016, "p": 0.9861, "sig": "ns"}], "scatter": [{"x": 18661.3, "y": 30, "kab": "Balangan"}, {"x": 34846.8, "y": 70, "kab": "Banjar"}, {"x": 1330.1, "y": 39, "kab": "Banjarbaru"}, {"x": 96.6, "y": 93, "kab": "Banjarmasin"}, {"x": 15869.3, "y": 83, "kab": "Barito Kuala"}, {"x": 7410.3, "y": 56, "kab": "Hulu Sungai Selatan"}, {"x": 6116.0, "y": 44, "kab": "Hulu Sungai Tengah"}, {"x": 5152.1, "y": 65, "kab": "Hulu Sungai Utara"}, {"x": 134494.0, "y": 38, "kab": "Kotabaru"}, {"x": 26528.9, "y": 39, "kab": "Tabalong"}, {"x": 82175.2, "y": 53, "kab": "Tanah Bumbu"}, {"x": 24171.5, "y": 52, "kab": "Tanah Laut"}, {"x": 13878.4, "y": 43, "kab": "Tapin"}], "tren": [{"tahun": 2015, "defor": 73493.2, "banjir": 39}, {"tahun": 2016, "defor": 66208.0, "banjir": 52}, {"tahun": 2017, "defor": 37328.8, "banjir": 68}, {"tahun": 2018, "defor": 37517.4, "banjir": 50}, {"tahun": 2019, "defor": 44747.5, "banjir": 55}, {"tahun": 2020, "defor": 21005.5, "banjir": 110}, {"tahun": 2021, "defor": 21558.4, "banjir": 160}, {"tahun": 2022, "defor": 17790.6, "banjir": 94}, {"tahun": 2023, "defor": 51080.9, "banjir": 77}, {"tahun": 2024, "defor": 30143.3, "banjir": 68}], "ts": {"Balangan": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [2246.6, 3608.4, 2583.3, 1742.5, 2687.9, 915.7, 1799.8, 1106.0, 1971.2, 1625.7], "banjir": [1, 2, 3, 2, 2, 5, 8, 4, 3, 3]}, "Banjar": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [6580.7, 6794.6, 3075.4, 3867.0, 3862.6, 2154.2, 2224.3, 1802.7, 4485.5, 2837.5], "banjir": [4, 5, 7, 5, 6, 11, 15, 9, 8, 7]}, "Banjarbaru": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [200.8, 301.7, 177.4, 68.7, 103.7, 77.8, 92.5, 62.9, 244.5, 133.3], "banjir": [2, 3, 4, 3, 3, 6, 9, 5, 4, 4]}, "Banjarmasin": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [24.0, 14.4, 19.0, 14.2, 2.1, 3.2, 1.5, 4.6, 13.6, 6.6], "banjir": [6, 7, 9, 7, 8, 14, 20, 12, 10, 9]}, "Barito Kuala": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [4992.9, 2823.7, 789.8, 1061.3, 2064.5, 561.4, 412.0, 689.0, 2474.7, 1191.9], "banjir": [5, 6, 8, 6, 7, 13, 18, 11, 9, 8]}, "Hulu Sungai Selatan": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [993.2, 1696.1, 1072.4, 739.9, 999.9, 312.3, 555.6, 460.9, 580.0, 532.2], "banjir": [3, 4, 5, 4, 4, 9, 13, 8, 6, 5]}, "Hulu Sungai Tengah": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [673.4, 780.6, 1169.7, 608.3, 969.5, 311.0, 618.0, 438.0, 547.3, 534.5], "banjir": [2, 3, 4, 3, 3, 7, 11, 6, 5, 4]}, "Hulu Sungai Utara": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [886.3, 2026.9, 267.2, 72.3, 763.0, 555.0, 63.3, 17.8, 500.3, 193.8], "banjir": [4, 5, 6, 5, 5, 10, 14, 9, 7, 6]}, "Kotabaru": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [20169.7, 23471.3, 14239.3, 13508.6, 13901.7, 9443.0, 7895.2, 7084.9, 24780.3, 13253.5], "banjir": [2, 3, 4, 2, 3, 6, 9, 5, 4, 4]}, "Tabalong": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [3938.3, 6161.1, 3124.7, 2224.8, 2785.7, 1646.4, 2341.9, 1277.7, 3028.3, 2216.0], "banjir": [2, 3, 4, 3, 3, 6, 9, 5, 4, 4]}, "Tanah Bumbu": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [23401.4, 11945.7, 7216.4, 9404.5, 12571.6, 3226.5, 3526.8, 3013.8, 7868.5, 4803.0], "banjir": [3, 4, 5, 4, 4, 8, 12, 7, 6, 5]}, "Tanah Laut": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [6411.6, 3442.7, 2481.1, 3034.0, 2462.8, 1231.6, 1007.4, 1050.3, 3050.0, 1702.5], "banjir": [3, 4, 5, 3, 4, 8, 12, 7, 6, 5]}, "Tapin": {"tahun": [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024], "defor": [2974.4, 3140.8, 1113.2, 1171.3, 1572.4, 567.5, 1020.0, 782.0, 1536.8, 1112.9], "banjir": [2, 3, 4, 3, 3, 7, 10, 6, 5, 4]}}, "summary": [{"kab_kota": "Balangan", "lat": -2.35, "lon": 115.3, "beta0": 39.9297, "beta_defor": -0.000381, "beta_izin": 0.172, "r2_lokal": 0.236, "fitted": 45.34, "defor_ha": 18661.3, "banjir": 30, "pct_izin": 72.83, "IKEH": 22.42, "Kategori_IKEH": "Rendah", "defor_pct": 9.86, "forest_2000": 189231.0}, {"kab_kota": "Banjar", "lat": -3.45, "lon": 114.75, "beta0": 71.9499, "beta_defor": 0.00017, "beta_izin": -0.3904, "r2_lokal": 0.1408, "fitted": 65.53, "defor_ha": 34846.8, "banjir": 70, "pct_izin": 31.59, "IKEH": 42.08, "Kategori_IKEH": "Sedang", "defor_pct": 10.31, "forest_2000": 337985.0}, {"kab_kota": "Banjarbaru", "lat": -3.44, "lon": 114.83, "beta0": 70.9386, "beta_defor": 0.000141, "beta_izin": -0.3702, "r2_lokal": 0.1382, "fitted": 66.75, "defor_ha": 1330.1, "banjir": 39, "pct_izin": 11.82, "IKEH": 8.89, "Kategori_IKEH": "Rendah", "defor_pct": 8.36, "forest_2000": 15916.0}, {"kab_kota": "Banjarmasin", "lat": -3.32, "lon": 114.59, "beta0": 74.8735, "beta_defor": 0.000177, "beta_izin": -0.3913, "r2_lokal": 0.1463, "fitted": 74.89, "defor_ha": 96.6, "banjir": 93, "pct_izin": 0.0, "IKEH": 40.0, "Kategori_IKEH": "Sedang", "defor_pct": 2.39, "forest_2000": 4046.0}, {"kab_kota": "Barito Kuala", "lat": -3.1, "lon": 114.5, "beta0": 77.5562, "beta_defor": 0.000146, "beta_izin": -0.3739, "r2_lokal": 0.1646, "fitted": 62.88, "defor_ha": 15869.3, "banjir": 83, "pct_izin": 45.45, "IKEH": 48.74, "Kategori_IKEH": "Sedang", "defor_pct": 11.68, "forest_2000": 135918.0}, {"kab_kota": "Hulu Sungai Selatan", "lat": -2.65, "lon": 115.2, "beta0": 57.9822, "beta_defor": -0.000206, "beta_izin": -0.074, "r2_lokal": 0.0525, "fitted": 51.76, "defor_ha": 7410.3, "banjir": 56, "pct_izin": 63.49, "IKEH": 33.75, "Kategori_IKEH": "Sedang", "defor_pct": 7.64, "forest_2000": 96939.0}, {"kab_kota": "Hulu Sungai Tengah", "lat": -2.52, "lon": 115.38, "beta0": 42.6332, "beta_defor": -0.000189, "beta_izin": 0.1103, "r2_lokal": 0.1049, "fitted": 49.23, "defor_ha": 6116.0, "banjir": 44, "pct_izin": 70.31, "IKEH": 27.44, "Kategori_IKEH": "Sedang", "defor_pct": 7.1, "forest_2000": 86155.0}, {"kab_kota": "Hulu Sungai Utara", "lat": -2.35, "lon": 115.2, "beta0": 46.2139, "beta_defor": -0.000491, "beta_izin": 0.1121, "r2_lokal": 0.2232, "fitted": 55.3, "defor_ha": 5152.1, "banjir": 65, "pct_izin": 103.51, "IKEH": 48.54, "Kategori_IKEH": "Sedang", "defor_pct": 10.9, "forest_2000": 47260.0}, {"kab_kota": "Kotabaru", "lat": -3.3, "lon": 116.2, "beta0": 34.4189, "beta_defor": -4.1e-05, "beta_izin": 0.3045, "r2_lokal": 0.5525, "fitted": 38.97, "defor_ha": 134494.0, "banjir": 38, "pct_izin": 32.99, "IKEH": 48.05, "Kategori_IKEH": "Sedang", "defor_pct": 18.16, "forest_2000": 740801.0}, {"kab_kota": "Tabalong", "lat": -2.2, "lon": 115.5, "beta0": 25.5549, "beta_defor": -0.000273, "beta_izin": 0.3292, "r2_lokal": 0.3795, "fitted": 37.61, "defor_ha": 26528.9, "banjir": 39, "pct_izin": 58.63, "IKEH": 26.76, "Kategori_IKEH": "Sedang", "defor_pct": 7.92, "forest_2000": 334893.0}, {"kab_kota": "Tanah Bumbu", "lat": -3.48, "lon": 115.6, "beta0": 56.2279, "beta_defor": -7.3e-05, "beta_izin": -0.0252, "r2_lokal": 0.0799, "fitted": 48.81, "defor_ha": 82175.2, "banjir": 53, "pct_izin": 57.43, "IKEH": 49.85, "Kategori_IKEH": "Sedang", "defor_pct": 17.67, "forest_2000": 465099.0}, {"kab_kota": "Tanah Laut", "lat": -3.71, "lon": 115.0, "beta0": 67.2122, "beta_defor": 0.000136, "beta_izin": -0.3618, "r2_lokal": 0.118, "fitted": 54.77, "defor_ha": 24171.5, "banjir": 52, "pct_izin": 43.48, "IKEH": 30.74, "Kategori_IKEH": "Sedang", "defor_pct": 13.48, "forest_2000": 179306.0}, {"kab_kota": "Tapin", "lat": -3.1, "lon": 114.9, "beta0": 71.531, "beta_defor": 3.1e-05, "beta_izin": -0.3008, "r2_lokal": 0.1533, "fitted": 54.56, "defor_ha": 13878.4, "banjir": 43, "pct_izin": 57.82, "IKEH": 25.81, "Kategori_IKEH": "Sedang", "defor_pct": 8.67, "forest_2000": 160158.0}], "panel": [{"kab_kota": "Balangan", "tahun": 2015, "loss_ha": 2246.602, "frekuensi_banjir": 1, "pct_izin": 72.83, "loss_rate_pct": 1.187, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2016, "loss_ha": 3608.383, "frekuensi_banjir": 2, "pct_izin": 72.83, "loss_rate_pct": 1.907, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2017, "loss_ha": 2583.289, "frekuensi_banjir": 3, "pct_izin": 72.83, "loss_rate_pct": 1.365, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2018, "loss_ha": 1742.504, "frekuensi_banjir": 2, "pct_izin": 72.83, "loss_rate_pct": 0.921, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2019, "loss_ha": 2687.866, "frekuensi_banjir": 2, "pct_izin": 72.83, "loss_rate_pct": 1.42, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2020, "loss_ha": 915.69, "frekuensi_banjir": 5, "pct_izin": 72.83, "loss_rate_pct": 0.484, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2021, "loss_ha": 1799.789, "frekuensi_banjir": 8, "pct_izin": 72.83, "loss_rate_pct": 0.951, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2022, "loss_ha": 1105.982, "frekuensi_banjir": 4, "pct_izin": 72.83, "loss_rate_pct": 0.584, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2023, "loss_ha": 1971.244, "frekuensi_banjir": 3, "pct_izin": 72.83, "loss_rate_pct": 1.042, "forest_2000_ha": 189231.3}, {"kab_kota": "Balangan", "tahun": 2024, "loss_ha": 1625.672, "frekuensi_banjir": 3, "pct_izin": 72.83, "loss_rate_pct": 0.859, "forest_2000_ha": 189231.3}, {"kab_kota": "Banjar", "tahun": 2015, "loss_ha": 6580.66, "frekuensi_banjir": 4, "pct_izin": 31.59, "loss_rate_pct": 1.947, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2016, "loss_ha": 6794.588, "frekuensi_banjir": 5, "pct_izin": 31.59, "loss_rate_pct": 2.01, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2017, "loss_ha": 3075.369, "frekuensi_banjir": 7, "pct_izin": 31.59, "loss_rate_pct": 0.91, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2018, "loss_ha": 3866.957, "frekuensi_banjir": 5, "pct_izin": 31.59, "loss_rate_pct": 1.144, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2019, "loss_ha": 3862.592, "frekuensi_banjir": 6, "pct_izin": 31.59, "loss_rate_pct": 1.143, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2020, "loss_ha": 2154.162, "frekuensi_banjir": 11, "pct_izin": 31.59, "loss_rate_pct": 0.637, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2021, "loss_ha": 2224.271, "frekuensi_banjir": 15, "pct_izin": 31.59, "loss_rate_pct": 0.658, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2022, "loss_ha": 1802.688, "frekuensi_banjir": 9, "pct_izin": 31.59, "loss_rate_pct": 0.533, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2023, "loss_ha": 4485.531, "frekuensi_banjir": 8, "pct_izin": 31.59, "loss_rate_pct": 1.327, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjar", "tahun": 2024, "loss_ha": 2837.496, "frekuensi_banjir": 7, "pct_izin": 31.59, "loss_rate_pct": 0.84, "forest_2000_ha": 337985.0}, {"kab_kota": "Banjarbaru", "tahun": 2015, "loss_ha": 200.78, "frekuensi_banjir": 2, "pct_izin": 11.82, "loss_rate_pct": 1.262, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2016, "loss_ha": 301.68, "frekuensi_banjir": 3, "pct_izin": 11.82, "loss_rate_pct": 1.895, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2017, "loss_ha": 177.444, "frekuensi_banjir": 4, "pct_izin": 11.82, "loss_rate_pct": 1.115, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2018, "loss_ha": 68.698, "frekuensi_banjir": 3, "pct_izin": 11.82, "loss_rate_pct": 0.432, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2019, "loss_ha": 103.711, "frekuensi_banjir": 3, "pct_izin": 11.82, "loss_rate_pct": 0.652, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2020, "loss_ha": 77.822, "frekuensi_banjir": 6, "pct_izin": 11.82, "loss_rate_pct": 0.489, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2021, "loss_ha": 92.524, "frekuensi_banjir": 9, "pct_izin": 11.82, "loss_rate_pct": 0.581, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2022, "loss_ha": 62.894, "frekuensi_banjir": 5, "pct_izin": 11.82, "loss_rate_pct": 0.395, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2023, "loss_ha": 244.498, "frekuensi_banjir": 4, "pct_izin": 11.82, "loss_rate_pct": 1.536, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarbaru", "tahun": 2024, "loss_ha": 133.305, "frekuensi_banjir": 4, "pct_izin": 11.82, "loss_rate_pct": 0.838, "forest_2000_ha": 15916.5}, {"kab_kota": "Banjarmasin", "tahun": 2015, "loss_ha": 23.961, "frekuensi_banjir": 6, "pct_izin": 0.0, "loss_rate_pct": 0.592, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2016, "loss_ha": 14.369, "frekuensi_banjir": 7, "pct_izin": 0.0, "loss_rate_pct": 0.355, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2017, "loss_ha": 18.977, "frekuensi_banjir": 9, "pct_izin": 0.0, "loss_rate_pct": 0.469, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2018, "loss_ha": 14.238, "frekuensi_banjir": 7, "pct_izin": 0.0, "loss_rate_pct": 0.352, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2019, "loss_ha": 2.142, "frekuensi_banjir": 8, "pct_izin": 0.0, "loss_rate_pct": 0.053, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2020, "loss_ha": 3.213, "frekuensi_banjir": 14, "pct_izin": 0.0, "loss_rate_pct": 0.079, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2021, "loss_ha": 1.517, "frekuensi_banjir": 20, "pct_izin": 0.0, "loss_rate_pct": 0.038, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2022, "loss_ha": 4.622, "frekuensi_banjir": 12, "pct_izin": 0.0, "loss_rate_pct": 0.114, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2023, "loss_ha": 13.567, "frekuensi_banjir": 10, "pct_izin": 0.0, "loss_rate_pct": 0.335, "forest_2000_ha": 4046.3}, {"kab_kota": "Banjarmasin", "tahun": 2024, "loss_ha": 6.569, "frekuensi_banjir": 9, "pct_izin": 0.0, "loss_rate_pct": 0.162, "forest_2000_ha": 4046.3}, {"kab_kota": "Barito Kuala", "tahun": 2015, "loss_ha": 4992.879, "frekuensi_banjir": 5, "pct_izin": 45.45, "loss_rate_pct": 3.674, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2016, "loss_ha": 2823.685, "frekuensi_banjir": 6, "pct_izin": 45.45, "loss_rate_pct": 2.078, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2017, "loss_ha": 789.764, "frekuensi_banjir": 8, "pct_izin": 45.45, "loss_rate_pct": 0.581, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2018, "loss_ha": 1061.308, "frekuensi_banjir": 6, "pct_izin": 45.45, "loss_rate_pct": 0.781, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2019, "loss_ha": 2064.52, "frekuensi_banjir": 7, "pct_izin": 45.45, "loss_rate_pct": 1.519, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2020, "loss_ha": 561.435, "frekuensi_banjir": 13, "pct_izin": 45.45, "loss_rate_pct": 0.413, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2021, "loss_ha": 411.979, "frekuensi_banjir": 18, "pct_izin": 45.45, "loss_rate_pct": 0.303, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2022, "loss_ha": 689.012, "frekuensi_banjir": 11, "pct_izin": 45.45, "loss_rate_pct": 0.507, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2023, "loss_ha": 2474.677, "frekuensi_banjir": 9, "pct_izin": 45.45, "loss_rate_pct": 1.821, "forest_2000_ha": 135917.6}, {"kab_kota": "Barito Kuala", "tahun": 2024, "loss_ha": 1191.889, "frekuensi_banjir": 8, "pct_izin": 45.45, "loss_rate_pct": 0.877, "forest_2000_ha": 135917.6}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2015, "loss_ha": 993.241, "frekuensi_banjir": 3, "pct_izin": 63.49, "loss_rate_pct": 1.025, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2016, "loss_ha": 1696.091, "frekuensi_banjir": 4, "pct_izin": 63.49, "loss_rate_pct": 1.75, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2017, "loss_ha": 1072.418, "frekuensi_banjir": 5, "pct_izin": 63.49, "loss_rate_pct": 1.106, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2018, "loss_ha": 739.863, "frekuensi_banjir": 4, "pct_izin": 63.49, "loss_rate_pct": 0.763, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2019, "loss_ha": 999.905, "frekuensi_banjir": 4, "pct_izin": 63.49, "loss_rate_pct": 1.032, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2020, "loss_ha": 312.266, "frekuensi_banjir": 9, "pct_izin": 63.49, "loss_rate_pct": 0.322, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2021, "loss_ha": 555.589, "frekuensi_banjir": 13, "pct_izin": 63.49, "loss_rate_pct": 0.573, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2022, "loss_ha": 460.871, "frekuensi_banjir": 8, "pct_izin": 63.49, "loss_rate_pct": 0.475, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2023, "loss_ha": 580.019, "frekuensi_banjir": 6, "pct_izin": 63.49, "loss_rate_pct": 0.598, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Selatan", "tahun": 2024, "loss_ha": 532.16, "frekuensi_banjir": 5, "pct_izin": 63.49, "loss_rate_pct": 0.549, "forest_2000_ha": 96939.3}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2015, "loss_ha": 673.442, "frekuensi_banjir": 2, "pct_izin": 70.31, "loss_rate_pct": 0.782, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2016, "loss_ha": 780.642, "frekuensi_banjir": 3, "pct_izin": 70.31, "loss_rate_pct": 0.906, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2017, "loss_ha": 1169.73, "frekuensi_banjir": 4, "pct_izin": 70.31, "loss_rate_pct": 1.358, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2018, "loss_ha": 608.288, "frekuensi_banjir": 3, "pct_izin": 70.31, "loss_rate_pct": 0.706, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2019, "loss_ha": 969.49, "frekuensi_banjir": 3, "pct_izin": 70.31, "loss_rate_pct": 1.125, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2020, "loss_ha": 311.007, "frekuensi_banjir": 7, "pct_izin": 70.31, "loss_rate_pct": 0.361, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2021, "loss_ha": 618.036, "frekuensi_banjir": 11, "pct_izin": 70.31, "loss_rate_pct": 0.717, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2022, "loss_ha": 438.048, "frekuensi_banjir": 6, "pct_izin": 70.31, "loss_rate_pct": 0.508, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2023, "loss_ha": 547.273, "frekuensi_banjir": 5, "pct_izin": 70.31, "loss_rate_pct": 0.635, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Tengah", "tahun": 2024, "loss_ha": 534.452, "frekuensi_banjir": 4, "pct_izin": 70.31, "loss_rate_pct": 0.62, "forest_2000_ha": 86155.2}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2015, "loss_ha": 886.306, "frekuensi_banjir": 4, "pct_izin": 103.51, "loss_rate_pct": 1.875, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2016, "loss_ha": 2026.933, "frekuensi_banjir": 5, "pct_izin": 103.51, "loss_rate_pct": 4.289, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2017, "loss_ha": 267.159, "frekuensi_banjir": 6, "pct_izin": 103.51, "loss_rate_pct": 0.565, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2018, "loss_ha": 72.284, "frekuensi_banjir": 5, "pct_izin": 103.51, "loss_rate_pct": 0.153, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2019, "loss_ha": 762.985, "frekuensi_banjir": 5, "pct_izin": 103.51, "loss_rate_pct": 1.614, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2020, "loss_ha": 554.962, "frekuensi_banjir": 10, "pct_izin": 103.51, "loss_rate_pct": 1.174, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2021, "loss_ha": 63.346, "frekuensi_banjir": 14, "pct_izin": 103.51, "loss_rate_pct": 0.134, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2022, "loss_ha": 17.823, "frekuensi_banjir": 9, "pct_izin": 103.51, "loss_rate_pct": 0.038, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2023, "loss_ha": 500.259, "frekuensi_banjir": 7, "pct_izin": 103.51, "loss_rate_pct": 1.058, "forest_2000_ha": 47259.9}, {"kab_kota": "Hulu Sungai Utara", "tahun": 2024, "loss_ha": 193.809, "frekuensi_banjir": 6, "pct_izin": 103.51, "loss_rate_pct": 0.41, "forest_2000_ha": 47259.9}, {"kab_kota": "Kotabaru", "tahun": 2015, "loss_ha": 20169.746, "frekuensi_banjir": 2, "pct_izin": 32.99, "loss_rate_pct": 2.723, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2016, "loss_ha": 23471.263, "frekuensi_banjir": 3, "pct_izin": 32.99, "loss_rate_pct": 3.168, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2017, "loss_ha": 14239.283, "frekuensi_banjir": 4, "pct_izin": 32.99, "loss_rate_pct": 1.922, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2018, "loss_ha": 13508.557, "frekuensi_banjir": 2, "pct_izin": 32.99, "loss_rate_pct": 1.824, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2019, "loss_ha": 13901.694, "frekuensi_banjir": 3, "pct_izin": 32.99, "loss_rate_pct": 1.877, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2020, "loss_ha": 9442.974, "frekuensi_banjir": 6, "pct_izin": 32.99, "loss_rate_pct": 1.275, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2021, "loss_ha": 7895.238, "frekuensi_banjir": 9, "pct_izin": 32.99, "loss_rate_pct": 1.066, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2022, "loss_ha": 7084.933, "frekuensi_banjir": 5, "pct_izin": 32.99, "loss_rate_pct": 0.956, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2023, "loss_ha": 24780.265, "frekuensi_banjir": 4, "pct_izin": 32.99, "loss_rate_pct": 3.345, "forest_2000_ha": 740800.9}, {"kab_kota": "Kotabaru", "tahun": 2024, "loss_ha": 13253.479, "frekuensi_banjir": 4, "pct_izin": 32.99, "loss_rate_pct": 1.789, "forest_2000_ha": 740800.9}, {"kab_kota": "Tabalong", "tahun": 2015, "loss_ha": 3938.261, "frekuensi_banjir": 2, "pct_izin": 58.63, "loss_rate_pct": 1.176, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2016, "loss_ha": 6161.066, "frekuensi_banjir": 3, "pct_izin": 58.63, "loss_rate_pct": 1.84, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2017, "loss_ha": 3124.721, "frekuensi_banjir": 4, "pct_izin": 58.63, "loss_rate_pct": 0.933, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2018, "loss_ha": 2224.848, "frekuensi_banjir": 3, "pct_izin": 58.63, "loss_rate_pct": 0.664, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2019, "loss_ha": 2785.705, "frekuensi_banjir": 3, "pct_izin": 58.63, "loss_rate_pct": 0.832, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2020, "loss_ha": 1646.373, "frekuensi_banjir": 6, "pct_izin": 58.63, "loss_rate_pct": 0.492, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2021, "loss_ha": 2341.92, "frekuensi_banjir": 9, "pct_izin": 58.63, "loss_rate_pct": 0.699, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2022, "loss_ha": 1277.702, "frekuensi_banjir": 5, "pct_izin": 58.63, "loss_rate_pct": 0.382, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2023, "loss_ha": 3028.308, "frekuensi_banjir": 4, "pct_izin": 58.63, "loss_rate_pct": 0.904, "forest_2000_ha": 334893.2}, {"kab_kota": "Tabalong", "tahun": 2024, "loss_ha": 2215.977, "frekuensi_banjir": 4, "pct_izin": 58.63, "loss_rate_pct": 0.662, "forest_2000_ha": 334893.2}, {"kab_kota": "Tanah Bumbu", "tahun": 2015, "loss_ha": 23401.361, "frekuensi_banjir": 3, "pct_izin": 57.43, "loss_rate_pct": 5.032, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2016, "loss_ha": 11945.737, "frekuensi_banjir": 4, "pct_izin": 57.43, "loss_rate_pct": 2.568, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2017, "loss_ha": 7216.371, "frekuensi_banjir": 5, "pct_izin": 57.43, "loss_rate_pct": 1.552, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2018, "loss_ha": 9404.548, "frekuensi_banjir": 4, "pct_izin": 57.43, "loss_rate_pct": 2.022, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2019, "loss_ha": 12571.59, "frekuensi_banjir": 4, "pct_izin": 57.43, "loss_rate_pct": 2.703, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2020, "loss_ha": 3226.519, "frekuensi_banjir": 8, "pct_izin": 57.43, "loss_rate_pct": 0.694, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2021, "loss_ha": 3526.81, "frekuensi_banjir": 12, "pct_izin": 57.43, "loss_rate_pct": 0.758, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2022, "loss_ha": 3013.759, "frekuensi_banjir": 7, "pct_izin": 57.43, "loss_rate_pct": 0.648, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2023, "loss_ha": 7868.489, "frekuensi_banjir": 6, "pct_izin": 57.43, "loss_rate_pct": 1.692, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Bumbu", "tahun": 2024, "loss_ha": 4803.019, "frekuensi_banjir": 5, "pct_izin": 57.43, "loss_rate_pct": 1.033, "forest_2000_ha": 465098.8}, {"kab_kota": "Tanah Laut", "tahun": 2015, "loss_ha": 6411.572, "frekuensi_banjir": 3, "pct_izin": 43.48, "loss_rate_pct": 3.576, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2016, "loss_ha": 3442.742, "frekuensi_banjir": 4, "pct_izin": 43.48, "loss_rate_pct": 1.92, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2017, "loss_ha": 2481.079, "frekuensi_banjir": 5, "pct_izin": 43.48, "loss_rate_pct": 1.384, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2018, "loss_ha": 3034.004, "frekuensi_banjir": 3, "pct_izin": 43.48, "loss_rate_pct": 1.692, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2019, "loss_ha": 2462.848, "frekuensi_banjir": 4, "pct_izin": 43.48, "loss_rate_pct": 1.374, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2020, "loss_ha": 1231.572, "frekuensi_banjir": 8, "pct_izin": 43.48, "loss_rate_pct": 0.687, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2021, "loss_ha": 1007.425, "frekuensi_banjir": 12, "pct_izin": 43.48, "loss_rate_pct": 0.562, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2022, "loss_ha": 1050.251, "frekuensi_banjir": 7, "pct_izin": 43.48, "loss_rate_pct": 0.586, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2023, "loss_ha": 3049.963, "frekuensi_banjir": 6, "pct_izin": 43.48, "loss_rate_pct": 1.701, "forest_2000_ha": 179306.5}, {"kab_kota": "Tanah Laut", "tahun": 2024, "loss_ha": 1702.546, "frekuensi_banjir": 5, "pct_izin": 43.48, "loss_rate_pct": 0.95, "forest_2000_ha": 179306.5}, {"kab_kota": "Tapin", "tahun": 2015, "loss_ha": 2974.386, "frekuensi_banjir": 2, "pct_izin": 57.82, "loss_rate_pct": 1.857, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2016, "loss_ha": 3140.836, "frekuensi_banjir": 3, "pct_izin": 57.82, "loss_rate_pct": 1.961, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2017, "loss_ha": 1113.155, "frekuensi_banjir": 4, "pct_izin": 57.82, "loss_rate_pct": 0.695, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2018, "loss_ha": 1171.265, "frekuensi_banjir": 3, "pct_izin": 57.82, "loss_rate_pct": 0.731, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2019, "loss_ha": 1572.405, "frekuensi_banjir": 3, "pct_izin": 57.82, "loss_rate_pct": 0.982, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2020, "loss_ha": 567.531, "frekuensi_banjir": 7, "pct_izin": 57.82, "loss_rate_pct": 0.354, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2021, "loss_ha": 1019.983, "frekuensi_banjir": 10, "pct_izin": 57.82, "loss_rate_pct": 0.637, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2022, "loss_ha": 782.009, "frekuensi_banjir": 6, "pct_izin": 57.82, "loss_rate_pct": 0.488, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2023, "loss_ha": 1536.841, "frekuensi_banjir": 5, "pct_izin": 57.82, "loss_rate_pct": 0.96, "forest_2000_ha": 160158.2}, {"kab_kota": "Tapin", "tahun": 2024, "loss_ha": 1112.944, "frekuensi_banjir": 4, "pct_izin": 57.82, "loss_rate_pct": 0.695, "forest_2000_ha": 160158.2}], "proyeksi": [{"tahun": 2025, "baseline_defor": 17909.1, "optimis_defor": 11640.9, "pesimis_defor": 22386.3, "baseline_banjir": 109.0, "optimis_banjir": 87.2, "pesimis_banjir": 130.8}, {"tahun": 2026, "baseline_defor": 13876.6, "optimis_defor": 9019.8, "pesimis_defor": 17345.8, "baseline_banjir": 114.8, "optimis_banjir": 91.8, "pesimis_banjir": 137.7}, {"tahun": 2027, "baseline_defor": 9844.2, "optimis_defor": 6398.8, "pesimis_defor": 12305.3, "baseline_banjir": 120.5, "optimis_banjir": 96.4, "pesimis_banjir": 144.6}, {"tahun": 2028, "baseline_defor": 5811.8, "optimis_defor": 3777.7, "pesimis_defor": 7264.8, "baseline_banjir": 126.3, "optimis_banjir": 101.0, "pesimis_banjir": 151.5}, {"tahun": 2029, "baseline_defor": 5000, "optimis_defor": 3250.0, "pesimis_defor": 6250.0, "baseline_banjir": 132.1, "optimis_banjir": 105.6, "pesimis_banjir": 158.5}, {"tahun": 2030, "baseline_defor": 5000, "optimis_defor": 3250.0, "pesimis_defor": 6250.0, "baseline_banjir": 137.8, "optimis_banjir": 110.3, "pesimis_banjir": 165.4}]};
+// ── GLOBALS ────────────────────────────────────────────────────────────────────
+let dark=false, currentMode='ikeh', markers={}, tsDetChart=null, tsTblChart=null;
+const IKEH_COLORS={"Sangat Tinggi":"#ef4444","Tinggi":"#f97316","Sedang":"#f59e0b","Rendah":"#22c55e"};
+const maxD=Math.max(...DATA.gwr.map(d=>d.defor_ha));
+const maxB=Math.max(...DATA.gwr.map(d=>d.banjir));
+const maxI=Math.max(...DATA.gwr.map(d=>d.pct_izin));
+
+// ── THEME ──────────────────────────────────────────────────────────────────────
+function toggleTheme(){dark=!dark;document.body.classList.toggle('dark',dark);setTimeout(()=>map&&map.invalidateSize(),150)}
+
+// ── TABS ───────────────────────────────────────────────────────────────────────
+function go(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    const ids=['peta','korelasi','gwr','sim1','sim2','proyeksi','kalkulator','tabel','metode'];
+    t.classList.toggle('active',ids[i]===id);
+  });
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(id==='peta') setTimeout(()=>map&&map.invalidateSize(),100);
+}
+
+// ── MAP ────────────────────────────────────────────────────────────────────────
+const map=L.map('map',{zoomControl:true}).setView([-3.0,115.2],8);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap · CARTO',maxZoom:18,subdomains:'abcd'}).addTo(map);
+
+function mVal(d){
+  const m={ikeh:d.IKEH,defor:d.defor_ha,banjir:d.banjir,izin:d.pct_izin,gwr_r2:d.r2_lokal,beta:Math.abs(d.beta_defor)*10000};
+  return m[currentMode]||0;
+}
+function mCol(d){
+  if(currentMode==='ikeh') return IKEH_COLORS[d.Kategori_IKEH]||'#94a3b8';
+  const vals=DATA.gwr.map(x=>mVal(x)), mn=Math.min(...vals), mx=Math.max(...vals);
+  const pct=mx>mn?(mVal(d)-mn)/(mx-mn):0;
+  if(currentMode==='defor') return `hsl(${120-pct*110},70%,${55-pct*20}%)`;
+  if(currentMode==='banjir') return `hsl(${220-pct*60},65%,${65-pct*25}%)`;
+  if(currentMode==='gwr_r2') return `hsl(150,60%,${65-pct*25}%)`;
+  if(currentMode==='beta') return d.beta_defor<0?`hsl(0,70%,${65-pct*20}%)`:`hsl(130,65%,${65-pct*20}%)`;
+  return `hsl(${30-pct*20},75%,${60-pct*20}%)`;
+}
+function mRad(d){
+  const vals=DATA.gwr.map(x=>mVal(x)), mn=Math.min(...vals), mx=Math.max(...vals);
+  const pct=mx>mn?(mVal(d)-mn)/(mx-mn):0;
+  return 10+pct*28;
+}
+function buildMarkers(){
+  Object.values(markers).forEach(m=>map.removeLayer(m));markers={};
+  DATA.gwr.forEach(d=>{
+    const m=L.circleMarker([d.lat,d.lon],{radius:mRad(d),fillColor:mCol(d),color:'rgba(0,0,0,0.2)',weight:1.5,fillOpacity:0.85}).addTo(map);
+    m.bindTooltip(`<b>${d.kab_kota}</b><br>IKEH: ${d.IKEH}<br>Defor: ${(d.defor_ha/1000).toFixed(1)}rb ha<br>Banjir: ${d.banjir}`,{direction:'top',offset:[0,-mRad(d)]});
+    m.on('click',()=>showDet(d));
+    markers[d.kab_kota]=m;
+  });
+  buildLeg();
+}
+function buildLeg(){
+  const el=document.getElementById('map-leg');
+  if(currentMode==='ikeh'){
+    el.innerHTML='<div style="font-weight:700;font-size:9px;color:var(--text2);margin-bottom:6px;text-transform:uppercase">IKEH Kategori</div>'+
+      Object.entries(IKEH_COLORS).map(([k,c])=>`<div class="leg-row"><div class="leg-dot" style="background:${c}"></div><span>${k}</span></div>`).join('');
+  } else {
+    const lbls={defor:'Deforestasi',banjir:'Banjir',izin:'% Izin',gwr_r2:'GWR R²',beta:'|β Defor|'};
+    el.innerHTML=`<div style="font-weight:700;font-size:9px;color:var(--text2);margin-bottom:6px;text-transform:uppercase">${lbls[currentMode]}</div>
+      <div class="leg-row"><div class="leg-dot" style="background:#86efac"></div><span>Rendah</span></div>
+      <div class="leg-row"><div class="leg-dot" style="width:18px;height:18px;background:#dc2626"></div><span>Tinggi</span></div>`;
+  }
+}
+function setMode(v,el){currentMode=v;document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));el.classList.add('active');buildMarkers()}
+
+let tsDetC=null;
+function showDet(d){
+  document.getElementById('map-det').classList.add('show');
+  document.getElementById('dn').textContent=d.kab_kota;
+  document.getElementById('di').textContent=(d.IKEH||0).toFixed(2);
+  document.getElementById('dk').textContent=d.Kategori_IKEH||'—';
+  document.getElementById('dd').textContent=(d.defor_ha/1000).toFixed(1)+' rb ha';
+  document.getElementById('ddp').textContent=(d.defor_pct||0).toFixed(2)+'%';
+  document.getElementById('db').textContent=d.banjir+' kej.';
+  document.getElementById('diz').textContent=(d.pct_izin||0).toFixed(1)+'%';
+  document.getElementById('dbeta').textContent=(d.beta_defor||0).toFixed(6);
+  document.getElementById('dgwr').textContent=(d.r2_lokal||0).toFixed(4);
+  document.querySelectorAll('.ikeh-row').forEach(r=>r.classList.toggle('sel',r.dataset.kab===d.kab_kota));
+  const ts=DATA.ts[d.kab_kota];
+  if(ts){const ctx=document.getElementById('ct-ts').getContext('2d');if(tsDetC)tsDetC.destroy();
+    tsDetC=new Chart(ctx,{data:{labels:ts.tahun,datasets:[
+      {type:'bar',label:'Defor',data:ts.defor,backgroundColor:'rgba(34,197,94,0.6)',yAxisID:'y1',order:2},
+      {type:'line',label:'Banjir',data:ts.banjir,borderColor:'#3b82f6',borderWidth:2,pointRadius:2,yAxisID:'y2',order:1,tension:.3}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:8},color:'#64748b'},grid:{display:false}},y1:{display:false},y2:{display:false}}}});}
+}
+function closeDet(){document.getElementById('map-det').classList.remove('show')}
+
+function buildIkehList(){
+  const sorted=[...DATA.gwr].sort((a,b)=>b.IKEH-a.IKEH); const mx=sorted[0].IKEH;
+  document.getElementById('ikeh-list').innerHTML=sorted.map((d,i)=>{
+    const col=IKEH_COLORS[d.Kategori_IKEH]||'#94a3b8';
+    return `<div class="ikeh-row" data-kab="${d.kab_kota}" onclick='showDet(${JSON.stringify(d)})'>
+      <span class="ikeh-rank">${i+1}</span><span class="ikeh-name">${d.kab_kota}</span>
+      <div class="ikeh-bar-wrap"><div class="ikeh-bar" style="width:${d.IKEH/mx*100}%;background:${col}"></div></div>
+      <span class="ikeh-score" style="color:${col}">${d.IKEH.toFixed(0)}</span></div>`;
+  }).join('');
+  // populate kab select
+  const sel=document.querySelector('#page-peta select:last-of-type');
+  sorted.forEach(d=>{const o=document.createElement('option');o.value=d.kab_kota;o.textContent=d.kab_kota;sel.appendChild(o);});
+}
+
+// ── CHARTS ─────────────────────────────────────────────────────────────────────
+const CO={responsive:true,maintainAspectRatio:false};
+const axX=(col='#64748b')=>({ticks:{color:col,font:{size:9}},grid:{color:'rgba(0,0,0,.04)'}});
+const axY=(col='#64748b')=>({ticks:{color:col,font:{size:9}},grid:{color:'rgba(0,0,0,.04)'}});
+
+function mkChart(id,cfg){return new Chart(document.getElementById(id).getContext('2d'),cfg)}
+
+function buildTrenMini(){
+  mkChart('ct-mini',{data:{labels:DATA.tren.map(d=>d.tahun),datasets:[
+    {type:'bar',label:'Defor rb ha',data:DATA.tren.map(d=>(d.defor/1000).toFixed(1)),backgroundColor:'rgba(34,197,94,0.6)',yAxisID:'y1',order:2},
+    {type:'line',label:'Banjir',data:DATA.tren.map(d=>d.banjir),borderColor:'#3b82f6',borderWidth:1.5,pointRadius:2,yAxisID:'y2',order:1,tension:.3}
+  ]},options:{...CO,plugins:{legend:{display:false}},scales:{x:{...axX(),grid:{display:false}},y1:{display:false},y2:{display:false}}}});
+}
+function buildTren(){
+  mkChart('ct-tren',{data:{labels:DATA.tren.map(d=>d.tahun),datasets:[
+    {type:'bar',label:'Deforestasi (rb ha)',data:DATA.tren.map(d=>(d.defor/1000).toFixed(1)),backgroundColor:'rgba(34,197,94,0.65)',yAxisID:'y1',order:2},
+    {type:'line',label:'Frek. Banjir',data:DATA.tren.map(d=>d.banjir),borderColor:'#3b82f6',backgroundColor:'rgba(59,130,246,0.07)',borderWidth:2,pointRadius:3,fill:true,yAxisID:'y2',order:1,tension:.3}
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:axX(),y1:{position:'left',...axY('#16a34a'),title:{display:true,text:'rb ha',color:'#16a34a',font:{size:9}}},y2:{position:'right',...axY('#2563eb'),grid:{display:false},title:{display:true,text:'kej.',color:'#2563eb',font:{size:9}}}}}});
+}
+function buildCorr(){
+  const el=document.getElementById('corr-cards');
+  el.innerHTML=DATA.korelasi.map(c=>{
+    const cls=c.sig==='***'?'sig3':c.sig==='*'?'sig1':'nsig';
+    const rc=c.r<0?'neg':'pos';
+    const sl={sig3:'p<0.001 ***',sig1:'p<0.05 *',nsig:'p>0.05 (ns)'}[cls];
+    return `<div class="cc ${cls}"><div class="cc-r ${rc}">${c.r.toFixed(3)}</div><div class="cc-lbl">${c.label}</div><div class="cc-sig" style="color:${cls==='nsig'?'var(--text3)':'var(--green)'}">${sl}</div></div>`;
+  }).join('');
+}
+function buildScatter(){
+  mkChart('ct-scatter',{type:'scatter',data:{datasets:[{label:'Kab/Kota',data:DATA.scatter.map(d=>({x:d.x/1000,y:d.y,label:d.kab})),backgroundColor:'rgba(34,197,94,0.75)',pointRadius:7,pointHoverRadius:9}]},
+    options:{...CO,plugins:{tooltip:{callbacks:{label:c=>`${c.raw.label}: (${c.raw.x.toFixed(1)} rb ha, ${c.raw.y} banjir)`}},legend:{display:false}},
+      scales:{x:{...axX(),title:{display:true,text:'Total Deforestasi 2015–23 (rb ha)',font:{size:10}}},y:{...axY(),title:{display:true,text:'Total Banjir (kej.)',font:{size:10}}}}}});
+}
+function buildOls(){
+  const o=DATA.ols;
+  document.getElementById('ols-r2').textContent=o.r2;document.getElementById('ols-adj').textContent=o.adj_r2;
+  document.getElementById('ols-f').textContent=o.f;document.getElementById('ols-fp').textContent=o.f_p;
+  const rows=[{n:'Konstanta (β₀)',c:o.const_coef,p:o.const_p},{n:'Deforestasi (β₁)',c:o.defor_coef,p:o.defor_p},{n:'% Izin (β₂)',c:o.izin_coef,p:o.izin_p}];
+  document.getElementById('ols-body').innerHTML=rows.map(r=>{
+    const sig=r.p<0.001?'***':r.p<0.05?'*':'ns';
+    return `<tr><td>${r.n}</td><td>${r.c}</td><td>${r.p}</td><td style="color:${r.p<0.05?'var(--green)':'var(--text3)'};font-weight:700">${sig}</td></tr>`;
+  }).join('');
+}
+function buildGwrTbl(){
+  const sorted=[...DATA.gwr].sort((a,b)=>b.r2_lokal-a.r2_lokal);
+  document.getElementById('gwr-t').innerHTML=sorted.map(d=>`<tr>
+    <td><b>${d.kab_kota}</b></td><td>${d.beta0}</td>
+    <td style="color:${d.beta_defor<0?'var(--red2)':'var(--green)'};font-weight:700">${d.beta_defor.toFixed(6)}</td>
+    <td>${d.beta_izin}</td>
+    <td><div style="display:flex;align-items:center;gap:5px"><div style="width:45px;height:5px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${Math.round(d.r2_lokal*100)}%;height:100%;background:var(--green)"></div></div>${d.r2_lokal.toFixed(4)}</div></td>
+    <td>${d.fitted}</td></tr>`).join('');
+}
+function buildGwrBeta(){
+  const sorted=[...DATA.gwr].sort((a,b)=>a.beta_defor-b.beta_defor);
+  mkChart('ct-beta',{type:'bar',data:{labels:sorted.map(d=>d.kab_kota),datasets:[{label:'β₁ Deforestasi',data:sorted.map(d=>d.beta_defor),backgroundColor:sorted.map(d=>d.beta_defor<0?'rgba(239,68,68,0.7)':'rgba(34,197,94,0.7)'),borderWidth:0}]},
+    options:{...CO,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:axX(),y:{...axY(),grid:{display:false}}}}});
+}
+function buildGwrFit(){
+  mkChart('ct-fit',{type:'bar',data:{labels:DATA.gwr.map(d=>d.kab_kota),datasets:[
+    {label:'Aktual',data:DATA.gwr.map(d=>d.banjir),backgroundColor:'rgba(59,130,246,0.65)'},
+    {label:'Fitted GWR',data:DATA.gwr.map(d=>d.fitted),backgroundColor:'rgba(34,197,94,0.65)'}
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:axX(),y:axY()}}});
+}
+
+// ── SIMULASI 1: SKENARIO GWR ───────────────────────────────────────────────────
+let sim1Chart=null, sim1AllChart=null;
+function initSim1(){
+  const sel=document.getElementById('sim1-kab');
+  DATA.gwr.forEach(d=>{const o=document.createElement('option');o.value=d.kab_kota;o.textContent=d.kab_kota;sel.appendChild(o);});
+  sel.value='Kotabaru'; updateSim1();
+}
+function updateSim1(){
+  const kab=document.getElementById('sim1-kab').value;
+  const pct=parseInt(document.getElementById('sim1-pct').value)/100;
+  const d=DATA.gwr.find(x=>x.kab_kota===kab); if(!d) return;
+  const deforBase=d.defor_ha/9; // rata-rata per tahun
+  const deforNew=deforBase*(1+pct);
+  const dDefor=deforNew-deforBase;
+  const banjirBase=d.banjir/9;
+  const banjirNew=Math.max(0,banjirBase+d.beta_defor*dDefor);
+  const deltaPct=((banjirNew-banjirBase)/banjirBase*100).toFixed(1);
+  document.getElementById('s1-defor-base').textContent=deforBase.toFixed(0)+' ha/th';
+  document.getElementById('s1-defor-new').textContent=deforNew.toFixed(0)+' ha/th';
+  document.getElementById('s1-banjir-base').textContent=banjirBase.toFixed(1)+' kej/th';
+  document.getElementById('s1-banjir-new').textContent=banjirNew.toFixed(1)+' kej/th';
+  document.getElementById('s1-beta').textContent=d.beta_defor.toFixed(6);
+  document.getElementById('s1-r2').textContent=d.r2_lokal.toFixed(4);
+  const delta=document.getElementById('s1-delta');
+  if(banjirNew>banjirBase){delta.textContent='+'+deltaPct+'%';delta.className='result-delta delta-pos';}
+  else{delta.textContent=deltaPct+'%';delta.className='result-delta delta-neg';}
+  // Interpretasi
+  const intEl=document.getElementById('sim1-interp');
+  const arah=pct>=0?'meningkat':'berkurang';
+  const dBanjir=banjirNew-banjirBase;
+  const isNeg=d.beta_defor<0;
+  const catatanBeta=isNeg
+    ? `<br><br>⚠️ <b>Catatan:</b> β₁ negatif di ${kab} menunjukkan hubungan <i>lokal</i> yang terbalik — bukan berarti deforestasi tidak berbahaya. Kondisi ini umum terjadi di wilayah luas dengan kepadatan penduduk rendah, di mana kejadian banjir cenderung <i>underreported</i> secara sistematis dibanding wilayah perkotaan. GWR R² lokal = ${d.r2_lokal.toFixed(4)} (${d.r2_lokal<0.15?'lemah — interpretasi dengan hati-hati':'moderat'}).`
+    : ``;
+  intEl.innerHTML=`Jika deforestasi di <b>${kab}</b> ${arah} sebesar ${Math.abs(pct*100).toFixed(0)}%, maka berdasarkan koefisien GWR lokal (β₁ = ${d.beta_defor.toFixed(6)}), frekuensi banjir rata-rata diperkirakan <b>${dBanjir>=0?'naik':'turun'} ${Math.abs(dBanjir).toFixed(2)} kejadian/tahun</b> (${Math.abs(deltaPct)}%). Basis: deforestasi ${deforBase.toFixed(0)} → ${deforNew.toFixed(0)} ha/tahun.${catatanBeta}`;
+  // Update chart
+  const ctx=document.getElementById('ct-sim1').getContext('2d');
+  if(sim1Chart) sim1Chart.destroy();
+  sim1Chart=new Chart(ctx,{type:'bar',data:{labels:['Deforestasi (ha/th)','Banjir (kej/th)'],datasets:[
+    {label:'Saat Ini',data:[deforBase,banjirBase],backgroundColor:'rgba(59,130,246,0.65)'},
+    {label:'Proyeksi',data:[deforNew,banjirNew],backgroundColor:pct>=0?'rgba(239,68,68,0.65)':'rgba(34,197,94,0.65)'}
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:11}}}},scales:{x:axX(),y:axY()}}});
+  // All kab chart
+  const allData=DATA.gwr.map(x=>{
+    const bBase=x.banjir/9; const dBase=x.defor_ha/9; const dNew=dBase*(1+pct);
+    const bNew=Math.max(0,bBase+x.beta_defor*(dNew-dBase));
+    return {kab:x.kab_kota, base:bBase, new:bNew};
+  });
+  const ctx2=document.getElementById('ct-sim1-all').getContext('2d');
+  if(sim1AllChart) sim1AllChart.destroy();
+  sim1AllChart=new Chart(ctx2,{type:'bar',data:{labels:allData.map(x=>x.kab),datasets:[
+    {label:'Banjir Saat Ini',data:allData.map(x=>x.base.toFixed(1)),backgroundColor:'rgba(59,130,246,0.55)'},
+    {label:'Banjir Proyeksi',data:allData.map(x=>x.new.toFixed(1)),backgroundColor:pct>=0?'rgba(239,68,68,0.55)':'rgba(34,197,94,0.55)'}
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{...axX(),ticks:{font:{size:9},maxRotation:45}},y:axY()}}});
+}
+
+// ── SIMULASI 2: IKEH WHAT-IF ───────────────────────────────────────────────────
+let sim2Chart=null;
+function updateSim2(){
+  const redD=parseInt(document.getElementById('s2-d').value)/100;
+  const redB=parseInt(document.getElementById('s2-b').value)/100;
+  const redI=parseInt(document.getElementById('s2-i').value)/100;
+  const ikehBase=DATA.gwr.map(d=>d.IKEH);
+  const avgBase=(ikehBase.reduce((a,b)=>a+b,0)/ikehBase.length).toFixed(2);
+  const newIkeh=DATA.gwr.map(d=>{
+    const sD=Math.min(100,Math.max(0,(d.defor_ha/maxD*100)*(1-redD)));
+    const sB=Math.min(100,Math.max(0,(d.banjir/maxB*100)*(1-redB)));
+    const sI=Math.min(100,Math.max(0,(d.pct_izin/maxI*100)*(1-redI)));
+    return {kab:d.kab_kota, old:d.IKEH, new:parseFloat((0.35*sD+0.40*sB+0.25*sI).toFixed(2))};
+  });
+  const avgNew=(newIkeh.reduce((a,b)=>a+b.new,0)/newIkeh.length).toFixed(2);
+  const deltaAvg=((avgNew-avgBase)/avgBase*100).toFixed(1);
+  document.getElementById('s2-ikeh-base').textContent=avgBase;
+  document.getElementById('s2-ikeh-new').textContent=avgNew;
+  const dEl=document.getElementById('s2-delta');
+  dEl.textContent=deltaAvg+'%';dEl.className='result-delta '+(deltaAvg<0?'delta-neg':'delta-pos');
+  const highCount=newIkeh.filter(x=>x.new>=50).length;
+  document.getElementById('s2-high').textContent=highCount+' kabupaten';
+  // Chart
+  const sorted=newIkeh.sort((a,b)=>b.old-a.old);
+  const ctx=document.getElementById('ct-sim2').getContext('2d');
+  if(sim2Chart) sim2Chart.destroy();
+  sim2Chart=new Chart(ctx,{type:'bar',data:{labels:sorted.map(x=>x.kab),datasets:[
+    {label:'IKEH Saat Ini',data:sorted.map(x=>x.old),backgroundColor:'rgba(239,68,68,0.65)'},
+    {label:'IKEH Proyeksi',data:sorted.map(x=>x.new),backgroundColor:'rgba(34,197,94,0.65)'}
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:{...axX(),ticks:{font:{size:9},maxRotation:45}},y:{...axY(),max:100}}}});
+  // Ranking
+  const cat=v=>v>=75?'Sangat Tinggi':v>=50?'Tinggi':v>=25?'Sedang':'Rendah';
+  const catCol={"Sangat Tinggi":"#ef4444","Tinggi":"#f97316","Sedang":"#f59e0b","Rendah":"#22c55e"};
+  document.getElementById('sim2-ranking').innerHTML=sorted.map(x=>{
+    const arrow=x.new<x.old?'↓':'→';const col=x.new<x.old?'var(--green)':'var(--text3)';
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px">
+      <span><b>${x.kab}</b></span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="color:${catCol[cat(x.old)]};font-weight:700">${x.old.toFixed(1)}</span>
+        <span style="color:${col}">${arrow}</span>
+        <span style="color:${catCol[cat(x.new)]};font-weight:700">${x.new.toFixed(1)}</span>
+        <span style="background:${x.new<x.old?'var(--green3)':'var(--surface2)'};color:${x.new<x.old?'var(--green)':'var(--text3)'};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${((x.new-x.old)/x.old*100).toFixed(1)}%</span>
+      </span>
+    </div>`;
+  }).join('');
+}
+
+// ── PROYEKSI 2030 ──────────────────────────────────────────────────────────────
+function buildProyeksi(){
+  const hist=DATA.tren; const proj=DATA.proyeksi;
+  const allYears=[...hist.map(d=>d.tahun),...proj.map(d=>d.tahun)];
+  const histD=hist.map(d=>d.defor); const histB=hist.map(d=>d.banjir);
+  const nullHist=Array(hist.length).fill(null);
+  mkChart('ct-proj-d',{type:'line',data:{labels:allYears,datasets:[
+    {label:'Historis',data:[...histD,...nullHist.slice(0,proj.length)],borderColor:'#64748b',borderWidth:2,pointRadius:3,tension:.3},
+    {label:'Baseline',data:[...nullHist,...proj.map(d=>d.baseline_defor)],borderColor:'#f59e0b',borderWidth:2,borderDash:[5,3],pointRadius:3,tension:.3},
+    {label:'Optimis',data:[...nullHist,...proj.map(d=>d.optimis_defor)],borderColor:'#22c55e',borderWidth:2,borderDash:[3,2],pointRadius:3,tension:.3,fill:'+1',backgroundColor:'rgba(34,197,94,0.05)'},
+    {label:'Pesimis',data:[...nullHist,...proj.map(d=>d.pesimis_defor)],borderColor:'#ef4444',borderWidth:2,borderDash:[3,2],pointRadius:3,tension:.3},
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:axX(),y:{...axY(),title:{display:true,text:'ha',font:{size:9}}}}}});
+  mkChart('ct-proj-b',{type:'line',data:{labels:allYears,datasets:[
+    {label:'Historis',data:[...histB,...nullHist.slice(0,proj.length)],borderColor:'#64748b',borderWidth:2,pointRadius:3,tension:.3},
+    {label:'Baseline',data:[...nullHist,...proj.map(d=>d.baseline_banjir)],borderColor:'#f59e0b',borderWidth:2,borderDash:[5,3],pointRadius:3,tension:.3},
+    {label:'Optimis',data:[...nullHist,...proj.map(d=>d.optimis_banjir)],borderColor:'#22c55e',borderWidth:2,borderDash:[3,2],pointRadius:3,tension:.3},
+    {label:'Pesimis',data:[...nullHist,...proj.map(d=>d.pesimis_banjir)],borderColor:'#ef4444',borderWidth:2,borderDash:[3,2],pointRadius:3,tension:.3},
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:axX(),y:{...axY(),title:{display:true,text:'kejadian',font:{size:9}}}}}});
+  document.getElementById('proj-tbl').innerHTML=proj.map(d=>
+    `<tr><td>${d.tahun}</td><td>${d.baseline_defor.toLocaleString('id')}</td><td>${d.optimis_defor.toLocaleString('id')}</td><td>${d.pesimis_defor.toLocaleString('id')}</td><td>${Math.round(d.baseline_banjir)}</td><td>${Math.round(d.optimis_banjir)}</td><td>${Math.round(d.pesimis_banjir)}</td></tr>`
+  ).join('');
+}
+
+// ── KALKULATOR RISIKO ──────────────────────────────────────────────────────────
+let kalkChart=null;
+function calcRisk(){
+  const hutan=parseFloat(document.getElementById('k-hutan').value)||0;
+  const defor=parseFloat(document.getElementById('k-defor').value)||0;
+  const izin=parseFloat(document.getElementById('k-izin').value)||0;
+  const banjir=parseFloat(document.getElementById('k-banjir').value)||0;
+  if(!hutan||!defor) return;
+  const rate=hutan>0?(defor/hutan*100):0;
+  const sD=Math.min(100,defor/maxD*100*9);
+  const sB=Math.min(100,banjir/maxB*100*9);
+  const sI=Math.min(100,izin/maxI*100);
+  const ikeh=parseFloat((0.35*sD+0.40*sB+0.25*sI).toFixed(2));
+  const kat=ikeh>=75?'Sangat Tinggi':ikeh>=50?'Tinggi':ikeh>=25?'Sedang':'Rendah';
+  const katCol={"Sangat Tinggi":"#ef4444","Tinggi":"#f97316","Sedang":"#f59e0b","Rendah":"#22c55e"};
+  document.getElementById('k-result').style.display='none';
+  document.getElementById('k-chart-wrap').style.display='block';
+  document.getElementById('k-rate').textContent=rate.toFixed(3)+'%/th';
+  document.getElementById('k-sd').textContent=sD.toFixed(1);
+  document.getElementById('k-sb').textContent=sB.toFixed(1);
+  document.getElementById('k-si').textContent=sI.toFixed(1);
+  document.getElementById('k-ikeh').textContent=ikeh;
+  const katEl=document.getElementById('k-kat');
+  katEl.textContent=kat;katEl.style.background=katCol[kat]+'33';katEl.style.color=katCol[kat];
+  // Needle
+  document.getElementById('k-needle').style.left=Math.min(98,Math.max(2,ikeh))+'%';
+  document.getElementById('k-needle').textContent=ikeh.toFixed(0);
+  // Chart perbandingan
+  const ctx=document.getElementById('ct-kalk').getContext('2d');
+  const nama=document.getElementById('k-nama').value||'Input Anda';
+  if(kalkChart) kalkChart.destroy();
+  const sorted=[...DATA.gwr].sort((a,b)=>b.IKEH-a.IKEH);
+  kalkChart=new Chart(ctx,{type:'bar',data:{
+    labels:[...sorted.map(d=>d.kab_kota),nama],
+    datasets:[{label:'IKEH',data:[...sorted.map(d=>d.IKEH),ikeh],
+      backgroundColor:[...sorted.map(d=>IKEH_COLORS[d.Kategori_IKEH]+'aa'),katCol[kat]],
+      borderWidth:0}]
+  },options:{...CO,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...axX(),max:100},y:{...axY(),ticks:{font:{size:9}}}}}});
+}
+
+// ── TABEL DATA ─────────────────────────────────────────────────────────────────
+let allRows=[];
+function buildTbl(){
+  allRows=DATA.panel.map(r=>({kab:r.kab_kota,th:r.tahun,loss:r.loss_ha!=null?r.loss_ha.toFixed(2):'—',rate:r.loss_rate_pct!=null?r.loss_rate_pct.toFixed(3):'—',banjir:r.frekuensi_banjir,izin:r.pct_izin,hutan:r.forest_2000_ha!=null?r.forest_2000_ha.toFixed(0):'—'}));
+  renderTbl(allRows);
+  const IKEH_COL={"Sangat Tinggi":"#ef4444","Tinggi":"#f97316","Sedang":"#f59e0b","Rendah":"#22c55e"};
+  document.getElementById('sum-t').innerHTML=[...DATA.gwr].sort((a,b)=>b.defor_ha-a.defor_ha).map(d=>
+    `<tr><td><b>${d.kab_kota}</b></td><td>${(d.defor_ha/1000).toFixed(1)}rb</td><td>${d.banjir}</td><td>${d.pct_izin}%</td><td><b>${d.IKEH}</b></td><td style="color:${IKEH_COL[d.Kategori_IKEH]};font-weight:700">${d.Kategori_IKEH}</td></tr>`).join('');
+  const tsSel=document.getElementById('ts-sel');
+  Object.keys(DATA.ts).sort().forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=k;tsSel.appendChild(o);});
+  tsSel.value='Kotabaru';updateTsFull('Kotabaru');
+}
+function renderTbl(rows){
+  document.getElementById('main-t').innerHTML=rows.map(r=>`<tr><td>${r.kab}</td><td>${r.th}</td><td>${r.loss}</td><td>${r.rate}</td><td>${r.banjir}</td><td>${r.izin}</td><td>${r.hutan}</td></tr>`).join('');
+}
+function filterT(){const q=document.getElementById('tbl-q').value.toLowerCase();renderTbl(allRows.filter(r=>r.kab.toLowerCase().includes(q)||String(r.th).includes(q)))}
+
+function updateTsFull(kab){
+  const d=DATA.ts[kab];if(!d) return;
+  const ctx=document.getElementById('ct-ts-full').getContext('2d');
+  if(tsTblChart) tsTblChart.destroy();
+  tsTblChart=new Chart(ctx,{data:{labels:d.tahun,datasets:[
+    {type:'bar',label:'Deforestasi (ha)',data:d.defor,backgroundColor:'rgba(34,197,94,0.65)',yAxisID:'y1',order:2},
+    {type:'line',label:'Frek. Banjir',data:d.banjir,borderColor:'#3b82f6',borderWidth:2,pointRadius:3,yAxisID:'y2',order:1,tension:.3}
+  ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:axX(),y1:{position:'left',...axY('#16a34a')},y2:{position:'right',...axY('#2563eb'),grid:{display:false}}}}});
+}
+
+// ── SORT TABLE ──────────────────────────────────────────────────────────────────
+function sortT(id,col){
+  const tb=document.getElementById(id); const rows=Array.from(tb.querySelectorAll('tr'));
+  const asc=tb.dataset.lastCol==col&&tb.dataset.asc==='1';
+  rows.sort((a,b)=>{const va=a.cells[col]?.textContent.replace(/[^0-9.\-]/g,'');const vb=b.cells[col]?.textContent.replace(/[^0-9.\-]/g,'');const na=parseFloat(va),nb=parseFloat(vb);if(!isNaN(na)&&!isNaN(nb))return asc?nb-na:na-nb;return asc?(vb||'').localeCompare(va||''):(va||'').localeCompare(vb||'');});
+  tb.dataset.lastCol=col;tb.dataset.asc=asc?'0':'1';rows.forEach(r=>tb.appendChild(r));
+}
+
+// ── EXPORT ──────────────────────────────────────────────────────────────────────
+function expCSV(type){
+  let rows,cols,fn;
+  if(type==='panel'){rows=DATA.panel;cols=['kab_kota','tahun','loss_ha','loss_rate_pct','frekuensi_banjir','pct_izin','forest_2000_ha'];fn='panel_kalsel.csv';}
+  else if(type==='ikeh'){rows=DATA.gwr;cols=['kab_kota','defor_ha','banjir','pct_izin','IKEH','Kategori_IKEH'];fn='ikeh_kalsel.csv';}
+  else{rows=DATA.gwr;cols=['kab_kota','beta0','beta_defor','beta_izin','r2_lokal','fitted'];fn='gwr_kalsel.csv';}
+  const csv=[cols.join(','),...rows.map(r=>cols.map(c=>r[c]).join(','))].join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download=fn;a.click();
+}
+
+// ── KPI ─────────────────────────────────────────────────────────────────────────
+function buildKpi(){
+  const td=DATA.gwr.reduce((s,d)=>s+d.defor_ha,0);
+  const tb=DATA.gwr.reduce((s,d)=>s+d.banjir,0);
+  const ai=DATA.gwr.reduce((s,d)=>s+d.pct_izin,0)/DATA.gwr.length;
+  document.getElementById('k1').textContent=(td/1000).toFixed(1);
+  document.getElementById('k2').textContent=tb;
+  document.getElementById('k3').textContent=ai.toFixed(1)+'%';
+}
+
+// ── MODE PRESENTASI ────────────────────────────────────────────────────────────
+let curSlide=1; const totalSlides=4;
+const slideTitles=['Overview & Temuan Kunci','Indeks Kerentanan (IKEH)','Hasil GWR','Rekomendasi Kebijakan'];
+function startPres(){
+  document.getElementById('pres-mode').classList.add('show');
+  curSlide=1;showSlide(1);
+  // Build pres charts
+  setTimeout(()=>{
+    mkChart('ps-ikeh-chart',{type:'bar',data:{labels:[...DATA.gwr].sort((a,b)=>b.IKEH-a.IKEH).map(d=>d.kab_kota),datasets:[{label:'IKEH',data:[...DATA.gwr].sort((a,b)=>b.IKEH-a.IKEH).map(d=>d.IKEH),backgroundColor:[...DATA.gwr].sort((a,b)=>b.IKEH-a.IKEH).map(d=>IKEH_COLORS[d.Kategori_IKEH]),borderWidth:0}]},options:{...CO,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{...axX(),max:100},y:axY()}}});
+    document.getElementById('ps-ikeh-tbl').innerHTML=[...DATA.gwr].sort((a,b)=>b.IKEH-a.IKEH).map((d,i)=>`<tr><td>${i+1}</td><td><b>${d.kab_kota}</b></td><td>${d.IKEH.toFixed(2)}</td><td style="color:${IKEH_COLORS[d.Kategori_IKEH]};font-weight:700">${d.Kategori_IKEH}</td></tr>`).join('');
+    const sorted=[...DATA.gwr].sort((a,b)=>a.beta_defor-b.beta_defor);
+    mkChart('ps-beta-chart',{type:'bar',data:{labels:sorted.map(d=>d.kab_kota),datasets:[{label:'β₁ Deforestasi (GWR)',data:sorted.map(d=>d.beta_defor),backgroundColor:sorted.map(d=>d.beta_defor<0?'rgba(239,68,68,0.7)':'rgba(34,197,94,0.7)'),borderWidth:0}]},options:{...CO,plugins:{legend:{display:false}},scales:{x:{...axX(),ticks:{maxRotation:45}},y:axY()}}});
+    const allY=[...DATA.tren.map(d=>d.tahun),...DATA.proyeksi.map(d=>d.tahun)];
+    const nullH=Array(DATA.tren.length).fill(null);
+    mkChart('ps-proj-chart',{type:'line',data:{labels:allY,datasets:[
+      {label:'Historis',data:[...DATA.tren.map(d=>d.banjir),...Array(DATA.proyeksi.length).fill(null)],borderColor:'#64748b',borderWidth:2,tension:.3},
+      {label:'Optimis',data:[...nullH,...DATA.proyeksi.map(d=>d.optimis_banjir)],borderColor:'#22c55e',borderWidth:2,borderDash:[4,2],tension:.3},
+      {label:'Pesimis',data:[...nullH,...DATA.proyeksi.map(d=>d.pesimis_banjir)],borderColor:'#ef4444',borderWidth:2,borderDash:[4,2],tension:.3},
+    ]},options:{...CO,plugins:{legend:{labels:{font:{size:10}}}},scales:{x:axX(),y:axY()}}});
+  },200);
+}
+function endPres(){document.getElementById('pres-mode').classList.remove('show')}
+function showSlide(n){
+  document.querySelectorAll('.pres-slide').forEach((s,i)=>s.classList.toggle('active',i+1===n));
+  document.getElementById('slide-num').textContent=n+' / '+totalSlides;
+  document.getElementById('pres-slide-title').textContent=slideTitles[n-1];
+}
+function nextSlide(){if(curSlide<totalSlides){curSlide++;showSlide(curSlide);}}
+function prevSlide(){if(curSlide>1){curSlide--;showSlide(curSlide);}}
+document.addEventListener('keydown',e=>{if(!document.getElementById('pres-mode').classList.contains('show'))return;if(e.key==='ArrowRight'||e.key==='ArrowDown')nextSlide();if(e.key==='ArrowLeft'||e.key==='ArrowUp')prevSlide();if(e.key==='Escape')endPres();});
+
+// ── INIT ────────────────────────────────────────────────────────────────────────
+buildMarkers();buildIkehList();buildTrenMini();buildTren();
+buildCorr();buildScatter();buildOls();
+buildGwrTbl();buildGwrBeta();buildGwrFit();
+initSim1();updateSim2();buildProyeksi();
+buildTbl();buildKpi();
+</script>
+</body>
+</html>
